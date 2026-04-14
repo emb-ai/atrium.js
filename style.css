@@ -1,6 +1,19 @@
+.canvas-wrap {
+  position: relative;
+  display: inline-block;
+}
+
 canvas {
-  border: 1px solid #ccc;
   width: 500px;
   height: 300px;
   display: block;
+  border: 1px solid #ccc;
+}
+
+/* Temp canvas overlays the persistent one */
+.canvas-wrap canvas + canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
