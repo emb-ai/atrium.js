@@ -44,9 +44,19 @@ el.onmousemove = function(e) {
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
-  for (var i = 1; i < points.length; i++) {
-    ctx.lineTo(points[i].x, points[i].y);
+
+  for (var i = 1; i < points.length - 1; i++) {
+    var midX = (points[i].x + points[i + 1].x) / 2;
+    var midY = (points[i].y + points[i + 1].y) / 2;
+    // Draw a quadratic curve using points[i] as the control point
+    // and the midpoint to points[i+1] as the end point
+    ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
   }
+
+  // Connect to the last point
+  var last = points[points.length - 1];
+  ctx.lineTo(last.x, last.y);
+
   ctx.stroke();
 };
 
