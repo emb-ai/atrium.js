@@ -14,7 +14,7 @@ function setupCanvas() {
   el.height = rect.height * dpr;
 
   ctx.scale(dpr, dpr);
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 5;
   ctx.lineJoin = ctx.lineCap = 'round';
 }
 
