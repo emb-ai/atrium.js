@@ -2,30 +2,44 @@ body {
   margin: 0;
   padding: 20px;
   font-family: monospace;
+  background: #111;
 }
 
 .canvas-wrap {
   position: relative;
   display: inline-block;
-}
-
-canvas {
   width: 500px;
   height: 300px;
-  display: block;
-  border: 1px solid #ccc;
-  cursor: crosshair;
 }
 
-#c {
-  position: relative;
-}
-
-/* Temp canvas overlays the persistent one */
-#tmp {
+/* SVG slide — bottom layer */
+#slide {
   position: absolute;
   top: 0;
   left: 0;
+  width: 500px;
+  height: 300px;
+  display: block;
+}
+
+/* Both canvases sit on top of the slide */
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 500px;
+  height: 300px;
+  display: block;
+  cursor: crosshair;
+}
+
+/* Persistent canvas — transparent so the slide shows through */
+#c {
+  background: transparent;
+}
+
+/* Temp canvas — also transparent, pointer-events off */
+#tmp {
   pointer-events: none;
 }
 
@@ -34,8 +48,8 @@ canvas {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.12);
-  color: #555;
+  background: rgba(0, 0, 0, 0.25);
+  color: #ccc;
   font-size: 11px;
   padding: 3px 7px;
   border-radius: 10px;
@@ -45,7 +59,7 @@ canvas {
 }
 
 #stroke-count.has-strokes {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   color: #fff;
 }
 

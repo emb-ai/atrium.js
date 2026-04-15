@@ -7,6 +7,70 @@
   </head>
   <body>
     <div class="canvas-wrap">
+
+      <!-- Slide layer (bottom) -->
+      <svg id="slide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300">
+        <!-- Background -->
+        <rect width="500" height="300" fill="#1a1a2e"/>
+
+        <!-- Subtle grid -->
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff0d" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="500" height="300" fill="url(#grid)"/>
+
+        <!-- Accent bar -->
+        <rect x="0" y="0" width="6" height="300" fill="#e94560"/>
+
+        <!-- Title -->
+        <text x="36" y="68" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#ffffff">
+          Q3 Revenue Overview
+        </text>
+        <line x1="36" y1="80" x2="464" y2="80" stroke="#e94560" stroke-width="1.5" opacity="0.6"/>
+
+        <!-- Bar chart -->
+        <!-- Apr -->
+        <rect x="60"  y="200" width="44" height="60"  fill="#e94560" opacity="0.85" rx="3"/>
+        <text x="82"  y="195" font-family="monospace" font-size="11" fill="#ccc" text-anchor="middle">$42k</text>
+        <text x="82"  y="278" font-family="monospace" font-size="11" fill="#888" text-anchor="middle">Apr</text>
+
+        <!-- May -->
+        <rect x="130" y="175" width="44" height="85"  fill="#e94560" opacity="0.85" rx="3"/>
+        <text x="152" y="170" font-family="monospace" font-size="11" fill="#ccc" text-anchor="middle">$58k</text>
+        <text x="152" y="278" font-family="monospace" font-size="11" fill="#888" text-anchor="middle">May</text>
+
+        <!-- Jun -->
+        <rect x="200" y="155" width="44" height="105" fill="#e94560" opacity="0.85" rx="3"/>
+        <text x="222" y="150" font-family="monospace" font-size="11" fill="#ccc" text-anchor="middle">$71k</text>
+        <text x="222" y="278" font-family="monospace" font-size="11" fill="#888" text-anchor="middle">Jun</text>
+
+        <!-- Jul -->
+        <rect x="270" y="140" width="44" height="120" fill="#16213e" opacity="1"    rx="3" stroke="#e94560" stroke-width="1.5"/>
+        <text x="292" y="135" font-family="monospace" font-size="11" fill="#e94560" text-anchor="middle" font-weight="bold">$81k</text>
+        <text x="292" y="278" font-family="monospace" font-size="11" fill="#e94560" text-anchor="middle" font-weight="bold">Jul ▲</text>
+
+        <!-- Aug -->
+        <rect x="340" y="160" width="44" height="100" fill="#e94560" opacity="0.85" rx="3"/>
+        <text x="362" y="155" font-family="monospace" font-size="11" fill="#ccc" text-anchor="middle">$68k</text>
+        <text x="362" y="278" font-family="monospace" font-size="11" fill="#888" text-anchor="middle">Aug</text>
+
+        <!-- Sep -->
+        <rect x="410" y="170" width="44" height="90"  fill="#e94560" opacity="0.85" rx="3"/>
+        <text x="432" y="165" font-family="monospace" font-size="11" fill="#ccc" text-anchor="middle">$61k</text>
+        <text x="432" y="278" font-family="monospace" font-size="11" fill="#888" text-anchor="middle">Sep</text>
+
+        <!-- Baseline -->
+        <line x1="36" y1="262" x2="464" y2="262" stroke="#ffffff22" stroke-width="1"/>
+
+        <!-- Key stat -->
+        <text x="36" y="110" font-family="Georgia, serif" font-size="13" fill="#ffffff99">
+          Peak month: <tspan fill="#e94560" font-weight="bold">July</tspan> · YoY growth: <tspan fill="#4ecca3" font-weight="bold">+23%</tspan>
+        </text>
+      </svg>
+
+      <!-- Drawing layers (top) -->
       <canvas id="c"></canvas>
       <div id="stroke-count">No strokes</div>
     </div>
