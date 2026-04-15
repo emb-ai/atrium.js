@@ -135,18 +135,20 @@ el.onmouseup = function(e) {
   updateStrokeCount();
 };
 
-// --- Right-click: delete last stroke ---
+// --- Ctrl+Z: delete last stroke ---
 
-el.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
-  if (strokes.length === 0) return;
-  strokes.pop();
-  redrawAll();
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'z') {
+    e.preventDefault();
+    if (strokes.length === 0) return;
+    strokes.pop();
+    redrawAll();
 
-  // Flash feedback
-  var badge = document.getElementById('stroke-count');
-  if (badge) {
-    badge.classList.add('flash');
-    setTimeout(function() { badge.classList.remove('flash'); }, 300);
+    // Flash feedback
+    var badge = document.getElementById('stroke-count');
+    if (badge) {
+      badge.classList.add('flash');
+      setTimeout(function() { badge.classList.remove('flash'); }, 300);
+    }
   }
 });
