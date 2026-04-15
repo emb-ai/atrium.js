@@ -70,27 +70,3 @@ canvas.drawing-disabled {
   pointer-events: none !important;
   cursor: default;
 }
-
-/* Badge */
-#stroke-count {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.25);
-  color: #ccc;
-  font-size: 11px;
-  padding: 3px 7px;
-  border-radius: 10px;
-  pointer-events: none;
-  transition: background 0.15s, color 0.15s;
-}
-
-#stroke-count.has-strokes {
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-}
-
-#stroke-count.flash {
-  background: #e55;
-  color: #fff;
-}

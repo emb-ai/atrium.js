@@ -104,21 +104,6 @@ function redrawAll() {
   ctx.clearRect(0, 0, el.width / dpr, el.height / dpr);
   applyStyles(ctx);
   getStrokes().forEach(pts => drawStroke(ctx, pts));
-  updateBadge();
-}
-
-// ─── Badge ────────────────────────────────────────────────────────────────────
-const badge = document.getElementById('stroke-count');
-
-function updateBadge() {
-  const n = getStrokes().length;
-  badge.textContent = n === 0 ? 'No strokes' : `${n} stroke${n === 1 ? '' : 's'}`;
-  badge.classList.toggle('has-strokes', n > 0);
-}
-
-function flashBadge() {
-  badge.classList.add('flash');
-  setTimeout(() => badge.classList.remove('flash'), 300);
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -142,7 +127,6 @@ function tryDeleteClosest(pos) {
   if (closestIdx !== -1 && Math.sqrt(closestDist) <= ERASE_THRESHOLD) {
     strokes.splice(closestIdx, 1);
     redrawAll();
-    flashBadge();
   }
 }
 
@@ -180,7 +164,6 @@ function finalizeDrawing() {
   tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
 
   currentPoints = [];
-  updateBadge();
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────
@@ -210,7 +193,7 @@ el.addEventListener('pointermove', e => {
   }
 });
 
-// --- Global mouseup to catch releases outside the canvas ---
+// Global mouseup to catch releases outside the canvas
 window.addEventListener('mouseup', e => {
   if (!drawingEnabled) return;
 
@@ -231,7 +214,6 @@ document.addEventListener('keydown', e => {
     if (!getStrokes().length) return;
     getStrokes().pop();
     redrawAll();
-    flashBadge();
   }
 
   if (e.key === 'F5') {
