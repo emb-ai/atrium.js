@@ -21,11 +21,24 @@ html, body {
   height: 100%;
   display: block;
   preserveAspectRatio: xMidYMid meet;
-  
-  /* Disable all interaction and text selection */
-  pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  /* pointer-events controlled by parent class */
+}
+
+/* When drawing is enabled, SVG should not intercept clicks */
+.drawing-enabled #slide {
+  pointer-events: none;
+}
+
+/* When drawing is disabled, SVG becomes interactive */
+.drawing-disabled #slide {
+  pointer-events: auto;
+}
+
+/* Ensure video inside SVG can receive events */
+#slide foreignObject {
+  pointer-events: bounding-box;
 }
 
 /* Both canvases sit on top, also fill container */
@@ -47,6 +60,12 @@ canvas {
 /* Temp canvas — also transparent, pointer-events off */
 #tmp {
   pointer-events: none;
+}
+
+/* When drawing is disabled, both canvases become transparent to mouse events */
+canvas.drawing-disabled {
+  pointer-events: none !important;
+  cursor: default;
 }
 
 /* Stroke counter badge — stays bottom‑right of the drawing area */

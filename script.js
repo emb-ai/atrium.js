@@ -17,6 +17,9 @@ let isErasing = false;
 let currentPoints = [];
 let strokes = [];
 
+// Drawing toggle (enabled by default)
+let drawingEnabled = true;
+
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 function applyStyles(context) {
   context.lineWidth   = LINE_WIDTH;
@@ -127,6 +130,20 @@ function tryDeleteClosest(pos) {
   }
 }
 
+// ─── Drawing toggle ───────────────────────────────────────────────────────────
+function toggleDrawing() {
+  drawingEnabled = !drawingEnabled;
+  
+  document.body.classList.toggle('drawing-enabled', drawingEnabled);
+  document.body.classList.toggle('drawing-disabled', !drawingEnabled);
+  
+  el.classList.toggle('drawing-disabled', !drawingEnabled);
+  tmp.classList.toggle('drawing-disabled', !drawingEnabled);
+  
+  // Also update cursor style on canvas
+  el.style.cursor = drawingEnabled ? 'crosshair' : 'default';
+}
+
 // ─── Fullscreen toggle (F5) ──────────────────────────────────────────────────
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -141,6 +158,8 @@ setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
 el.addEventListener('mousedown', e => {
+  if (!drawingEnabled) return;  // Ignore all drawing actions when disabled
+  
   if (e.button === 2) {
     isErasing = true;
     tryDeleteClosest(getPos(e));
@@ -151,6 +170,8 @@ el.addEventListener('mousedown', e => {
 });
 
 el.addEventListener('pointermove', e => {
+  if (!drawingEnabled) return;
+  
   if (isErasing) {
     tryDeleteClosest(getPos(e));
   } else if (isDrawing) {
@@ -160,6 +181,8 @@ el.addEventListener('pointermove', e => {
 });
 
 el.addEventListener('mouseup', e => {
+  if (!drawingEnabled) return;
+  
   if (e.button === 2) {
     isErasing = false;
   } else if (e.button === 0 && isDrawing) {
@@ -191,5 +214,15 @@ document.addEventListener('keydown', e => {
   if (e.key === 'F5') {
     e.preventDefault();
     toggleFullscreen();
+  }
+  
+  // 'v' or 'V' to toggle drawing mode (enable/disable)
+  if (e.key === 'v' || e.key === 'V') {
+    e.preventDefault();
+    toggleDrawing();
+    // Optional: flash badge to indicate mode change
+    badge.textContent = drawingEnabled ? 'Drawing enabled' : 'Drawing disabled (video mode)';
+    badge.classList.add('has-strokes');
+    setTimeout(() => updateBadge(), 800);
   }
 });
