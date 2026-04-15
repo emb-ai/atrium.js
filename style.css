@@ -1,34 +1,36 @@
-body {
+html, body {
   margin: 0;
-  padding: 20px;
-  font-family: monospace;
+  padding: 0;
+  height: 100%;
   background: #111;
+  font-family: monospace;
 }
 
 .canvas-wrap {
   position: relative;
-  display: inline-block;
-  width: 500px;
-  height: 300px;
+  width: 100%;
+  height: 100%;
 }
 
-/* SVG slide — bottom layer */
+/* SVG slide — bottom layer, now fills container */
 #slide {
   position: absolute;
   top: 0;
   left: 0;
-  width: 500px;
-  height: 300px;
+  width: 100%;
+  height: 100%;
   display: block;
+  /* Stretch the 500x300 viewBox to fill any aspect ratio */
+  preserveAspectRatio: none;
 }
 
-/* Both canvases sit on top of the slide */
+/* Both canvases sit on top, also fill container */
 canvas {
   position: absolute;
   top: 0;
   left: 0;
-  width: 500px;
-  height: 300px;
+  width: 100%;
+  height: 100%;
   display: block;
   cursor: crosshair;
 }
@@ -43,7 +45,7 @@ canvas {
   pointer-events: none;
 }
 
-/* Stroke counter badge */
+/* Stroke counter badge — stays bottom‑right of the drawing area */
 #stroke-count {
   position: absolute;
   bottom: 8px;

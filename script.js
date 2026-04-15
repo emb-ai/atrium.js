@@ -134,6 +134,16 @@ function tryDeleteClosest(pos) {
   }
 }
 
+// ─── Fullscreen toggle (F5) ──────────────────────────────────────────────────
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
 // ─── Event listeners ──────────────────────────────────────────────────────────
 
 setupCanvas();
@@ -177,11 +187,18 @@ el.addEventListener('mouseup', e => {
 el.addEventListener('contextmenu', e => e.preventDefault());
 
 document.addEventListener('keydown', e => {
+  // Ctrl+Z for undo
   if (e.ctrlKey && e.key === 'z') {
     e.preventDefault();
     if (!strokes.length) return;
     strokes.pop();
     redrawAll();
     flashBadge();
+  }
+
+  // F5 for fullscreen toggle
+  if (e.key === 'F5') {
+    e.preventDefault();
+    toggleFullscreen();
   }
 });
