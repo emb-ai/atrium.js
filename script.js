@@ -103,45 +103,10 @@ function updateStrokeCount() {
 
 // --- Pointer events ---
 
-el.onmousedown = function(e) {
-  if (e.button !== 0) return; // only left button starts drawing
-  isDrawing = true;
-  points = [getPos(e)];
-};
+var isErasing = false;
 
-el.addEventListener('pointermove', function(e) {
-  if (!isDrawing) return;
-  points.push(getPos(e));
-  appendSegment(tctx, points);
-});
-
-el.onmouseup = function(e) {
-  if (!isDrawing) return;
-  isDrawing = false;
-
-  // Save the completed stroke
-  if (points.length > 1) {
-    strokes.push(points.slice());
-  }
-
-  // Commit temp canvas pixels onto the persistent canvas
-  var dpr = window.devicePixelRatio || 1;
-  ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
-
-  // Clear temp canvas
-  tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
-  points = [];
-
-  updateStrokeCount();
-};
-
-// --- Right-click: delete stroke closest to click position ---
-
-el.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
+function tryDeleteClosest(pos) {
   if (strokes.length === 0) return;
-
-  var pos = getPos(e);
   var closestIdx = -1;
   var closestDist = Infinity;
 
@@ -168,7 +133,55 @@ el.addEventListener('contextmenu', function(e) {
       setTimeout(function() { badge.classList.remove('flash'); }, 300);
     }
   }
+}
+
+el.onmousedown = function(e) {
+  if (e.button === 2) {
+    isErasing = true;
+    tryDeleteClosest(getPos(e));
+    return;
+  }
+  if (e.button !== 0) return;
+  isDrawing = true;
+  points = [getPos(e)];
+};
+
+el.addEventListener('pointermove', function(e) {
+  if (isErasing) {
+    tryDeleteClosest(getPos(e));
+    return;
+  }
+  if (!isDrawing) return;
+  points.push(getPos(e));
+  appendSegment(tctx, points);
 });
+
+el.onmouseup = function(e) {
+  if (e.button === 2) {
+    isErasing = false;
+    return;
+  }
+  if (!isDrawing) return;
+  isDrawing = false;
+
+  // Save the completed stroke
+  if (points.length > 1) {
+    strokes.push(points.slice());
+  }
+
+  // Commit temp canvas pixels onto the persistent canvas
+  var dpr = window.devicePixelRatio || 1;
+  ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
+
+  // Clear temp canvas
+  tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
+  points = [];
+
+  updateStrokeCount();
+};
+
+// Suppress browser context menu on the canvas
+el.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.key === 'z') {
