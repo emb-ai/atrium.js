@@ -1,11 +1,9 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
-
 const ERASE_THRESHOLD = 20; // px — max distance for right-click stroke deletion
 const STROKE_STYLE = '#faff00';
 const LINE_WIDTH = 5;
 
 // ─── Canvas setup ─────────────────────────────────────────────────────────────
-
 const el  = document.getElementById('c');
 const ctx = el.getContext('2d');
 
@@ -14,14 +12,12 @@ const tctx = tmp.getContext('2d');
 el.insertAdjacentElement('afterend', tmp);
 
 // ─── State ────────────────────────────────────────────────────────────────────
-
 let isDrawing = false;
 let isErasing = false;
 let currentPoints = [];
 let strokes = [];
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
-
 function applyStyles(context) {
   context.lineWidth   = LINE_WIDTH;
   context.lineJoin    = 'round';
@@ -52,7 +48,6 @@ function getPos(e) {
 }
 
 // ─── Drawing ──────────────────────────────────────────────────────────────────
-
 function drawStroke(context, pts) {
   if (pts.length < 2) return;
   context.beginPath();
@@ -97,7 +92,6 @@ function redrawAll() {
 }
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
-
 const badge = document.getElementById('stroke-count');
 
 function updateBadge() {
@@ -113,7 +107,6 @@ function flashBadge() {
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
-
 function tryDeleteClosest(pos) {
   if (!strokes.length) return;
 
@@ -135,7 +128,6 @@ function tryDeleteClosest(pos) {
 }
 
 // ─── Fullscreen toggle (F5) ──────────────────────────────────────────────────
-
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen();
@@ -145,7 +137,6 @@ function toggleFullscreen() {
 }
 
 // ─── Event listeners ──────────────────────────────────────────────────────────
-
 setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
