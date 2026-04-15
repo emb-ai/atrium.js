@@ -21,13 +21,10 @@ function getStrokes() {
 }
 
 function showSlide(idx) {
-  // Stop at boundaries (no wrap-around)
   if (idx < 0 || idx >= slides.length) return;
-
   slides[currentSlide].classList.remove('active');
   currentSlide = idx;
   slides[currentSlide].classList.add('active');
-
   redrawAll();
 }
 
@@ -170,6 +167,22 @@ function toggleFullscreen() {
   }
 }
 
+// ─── Finalize current stroke (used on global mouseup) ─────────────────────────
+function finalizeDrawing() {
+  if (!isDrawing) return;
+
+  if (currentPoints.length > 1) {
+    getStrokes().push([...currentPoints]);
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
+  tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
+
+  currentPoints = [];
+  updateBadge();
+}
+
 // ─── Events ───────────────────────────────────────────────────────────────────
 setupCanvas();
 window.addEventListener('resize', setupCanvas);
@@ -197,24 +210,16 @@ el.addEventListener('pointermove', e => {
   }
 });
 
-el.addEventListener('mouseup', e => {
+// --- Global mouseup to catch releases outside the canvas ---
+window.addEventListener('mouseup', e => {
   if (!drawingEnabled) return;
 
-  if (e.button === 2) {
-    isErasing = false;
-  } else if (e.button === 0 && isDrawing) {
+  if (isDrawing) {
+    finalizeDrawing();
     isDrawing = false;
-
-    if (currentPoints.length > 1) {
-      getStrokes().push([...currentPoints]);
-    }
-
-    const dpr = window.devicePixelRatio || 1;
-    ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
-    tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
-
-    currentPoints = [];
-    updateBadge();
+  }
+  if (isErasing) {
+    isErasing = false;
   }
 });
 
@@ -239,7 +244,6 @@ document.addEventListener('keydown', e => {
     toggleDrawing();
   }
 
-  // Slide navigation
   if (e.key === 'ArrowRight') {
     showSlide(currentSlide + 1);
   }
