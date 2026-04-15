@@ -1,6 +1,6 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ERASE_THRESHOLD = 20; // px — max distance for right-click stroke deletion
-const STROKE_STYLE = '#faff00';
+const STROKE_STYLE = '#168afe';
 const LINE_WIDTH = 5;
 
 // ─── Canvas setup ─────────────────────────────────────────────────────────────
