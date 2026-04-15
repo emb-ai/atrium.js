@@ -1,5 +1,5 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ERASE_THRESHOLD = 20; // px — max distance for right-click stroke deletion
+const ERASE_THRESHOLD = 20;
 const STROKE_STYLE = '#168afe';
 const LINE_WIDTH = 5;
 
@@ -11,13 +11,30 @@ const tmp  = Object.assign(document.createElement('canvas'), { id: 'tmp' });
 const tctx = tmp.getContext('2d');
 el.insertAdjacentElement('afterend', tmp);
 
+// ─── Slides ───────────────────────────────────────────────────────────────────
+let currentSlide = 0;
+const slides = document.querySelectorAll('.slide');
+let slidesData = Array.from(slides).map(() => []); // strokes per slide
+
+function getStrokes() {
+  return slidesData[currentSlide];
+}
+
+function showSlide(idx) {
+  // Stop at boundaries (no wrap-around)
+  if (idx < 0 || idx >= slides.length) return;
+
+  slides[currentSlide].classList.remove('active');
+  currentSlide = idx;
+  slides[currentSlide].classList.add('active');
+
+  redrawAll();
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let isDrawing = false;
 let isErasing = false;
 let currentPoints = [];
-let strokes = [];
-
-// Drawing toggle (enabled by default)
 let drawingEnabled = true;
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
@@ -71,7 +88,6 @@ function drawStroke(context, pts) {
   context.stroke();
 }
 
-// Appends only the newest segment to the live canvas — no full redraw needed
 function appendLiveSegment(pts) {
   const len = pts.length;
   if (len < 3) return;
@@ -90,7 +106,7 @@ function redrawAll() {
   const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, el.width / dpr, el.height / dpr);
   applyStyles(ctx);
-  strokes.forEach(pts => drawStroke(ctx, pts));
+  getStrokes().forEach(pts => drawStroke(ctx, pts));
   updateBadge();
 }
 
@@ -98,19 +114,19 @@ function redrawAll() {
 const badge = document.getElementById('stroke-count');
 
 function updateBadge() {
-  if (!badge) return;
-  const n = strokes.length;
+  const n = getStrokes().length;
   badge.textContent = n === 0 ? 'No strokes' : `${n} stroke${n === 1 ? '' : 's'}`;
   badge.classList.toggle('has-strokes', n > 0);
 }
 
 function flashBadge() {
-  badge?.classList.add('flash');
-  setTimeout(() => badge?.classList.remove('flash'), 300);
+  badge.classList.add('flash');
+  setTimeout(() => badge.classList.remove('flash'), 300);
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
 function tryDeleteClosest(pos) {
+  const strokes = getStrokes();
   if (!strokes.length) return;
 
   let closestIdx  = -1;
@@ -119,7 +135,10 @@ function tryDeleteClosest(pos) {
   strokes.forEach((pts, i) => {
     for (const p of pts) {
       const d = (p.x - pos.x) ** 2 + (p.y - pos.y) ** 2;
-      if (d < closestDist) { closestDist = d; closestIdx = i; }
+      if (d < closestDist) {
+        closestDist = d;
+        closestIdx = i;
+      }
     }
   });
 
@@ -130,21 +149,19 @@ function tryDeleteClosest(pos) {
   }
 }
 
-// ─── Drawing toggle ───────────────────────────────────────────────────────────
+// ─── Toggles ──────────────────────────────────────────────────────────────────
 function toggleDrawing() {
   drawingEnabled = !drawingEnabled;
-  
+
   document.body.classList.toggle('drawing-enabled', drawingEnabled);
   document.body.classList.toggle('drawing-disabled', !drawingEnabled);
-  
+
   el.classList.toggle('drawing-disabled', !drawingEnabled);
   tmp.classList.toggle('drawing-disabled', !drawingEnabled);
-  
-  // Also update cursor style on canvas
+
   el.style.cursor = drawingEnabled ? 'crosshair' : 'default';
 }
 
-// ─── Fullscreen toggle (F5) ──────────────────────────────────────────────────
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen();
@@ -153,13 +170,13 @@ function toggleFullscreen() {
   }
 }
 
-// ─── Event listeners ──────────────────────────────────────────────────────────
+// ─── Events ───────────────────────────────────────────────────────────────────
 setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
 el.addEventListener('mousedown', e => {
-  if (!drawingEnabled) return;  // Ignore all drawing actions when disabled
-  
+  if (!drawingEnabled) return;
+
   if (e.button === 2) {
     isErasing = true;
     tryDeleteClosest(getPos(e));
@@ -171,7 +188,7 @@ el.addEventListener('mousedown', e => {
 
 el.addEventListener('pointermove', e => {
   if (!drawingEnabled) return;
-  
+
   if (isErasing) {
     tryDeleteClosest(getPos(e));
   } else if (isDrawing) {
@@ -182,17 +199,20 @@ el.addEventListener('pointermove', e => {
 
 el.addEventListener('mouseup', e => {
   if (!drawingEnabled) return;
-  
+
   if (e.button === 2) {
     isErasing = false;
   } else if (e.button === 0 && isDrawing) {
     isDrawing = false;
 
-    if (currentPoints.length > 1) strokes.push([...currentPoints]);
+    if (currentPoints.length > 1) {
+      getStrokes().push([...currentPoints]);
+    }
 
     const dpr = window.devicePixelRatio || 1;
     ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
     tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
+
     currentPoints = [];
     updateBadge();
   }
@@ -201,28 +221,30 @@ el.addEventListener('mouseup', e => {
 el.addEventListener('contextmenu', e => e.preventDefault());
 
 document.addEventListener('keydown', e => {
-  // Ctrl+Z for undo
   if (e.ctrlKey && e.key === 'z') {
     e.preventDefault();
-    if (!strokes.length) return;
-    strokes.pop();
+    if (!getStrokes().length) return;
+    getStrokes().pop();
     redrawAll();
     flashBadge();
   }
 
-  // F5 for fullscreen toggle
   if (e.key === 'F5') {
     e.preventDefault();
     toggleFullscreen();
   }
-  
-  // 'v' or 'V' to toggle drawing mode (enable/disable)
+
   if (e.key === 'v' || e.key === 'V') {
     e.preventDefault();
     toggleDrawing();
-    // Optional: flash badge to indicate mode change
-    badge.textContent = drawingEnabled ? 'Drawing enabled' : 'Drawing disabled (video mode)';
-    badge.classList.add('has-strokes');
-    setTimeout(() => updateBadge(), 800);
+  }
+
+  // Slide navigation
+  if (e.key === 'ArrowRight') {
+    showSlide(currentSlide + 1);
+  }
+
+  if (e.key === 'ArrowLeft') {
+    showSlide(currentSlide - 1);
   }
 });

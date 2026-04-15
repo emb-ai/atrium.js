@@ -2,35 +2,46 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Canvas Drawing + Video</title>
+    <title>Slides + Drawing</title>
     <link rel="stylesheet" href="./style.css">
   </head>
   <body class="drawing-enabled">
     <div class="canvas-wrap">
-      <!-- Slide layer – Full HD 16:9 viewBox -->
-      <svg id="slide" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
-        <!-- Background -->
-        <rect width="1920" height="1080" fill="#eee"/>
 
-        <!-- Embedded video (not fullscreen) – enlarged for better control size -->
-        <foreignObject x="100" y="100" width="960" height="315">
-          <video
-            xmlns="http://www.w3.org/1999/xhtml"
-            width="100%"
-            height="100%"
-            controls
-            src="video.mp4"
-            style="background: black; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"
-          >
-            Your browser does not support the video tag.
-          </video>
-        </foreignObject>
-      </svg>
+      <!-- Slides -->
+      <div id="slides">
+        <!-- Slide 1 -->
+        <svg class="slide active" viewBox="0 0 1920 1080">
+          <rect width="1920" height="1080" fill="#eee"/>
 
-      <!-- Drawing layers (top) -->
+          <text x="50" y="80" font-size="48" fill="#000">slide 1</text>
+
+          <foreignObject x="100" y="100" width="960" height="315">
+            <video
+              xmlns="http://www.w3.org/1999/xhtml"
+              width="100%"
+              height="100%"
+              controls
+              src="video.mp4"
+              style="background: black; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </foreignObject>
+        </svg>
+
+        <!-- Slide 2 -->
+        <svg class="slide" viewBox="0 0 1920 1080">
+          <rect width="1920" height="1080" fill="#ddd"/>
+          <text x="50" y="80" font-size="48" fill="#000">slide 2</text>
+        </svg>
+      </div>
+
+      <!-- Drawing -->
       <canvas id="c"></canvas>
       <div id="stroke-count">No strokes</div>
     </div>
+
     <script src="./script.js"></script>
   </body>
 </html>

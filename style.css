@@ -12,36 +12,42 @@ html, body {
   height: 100%;
 }
 
-/* SVG slide — bottom layer, maintains 16:9 aspect ratio without distortion */
-#slide {
+/* Slides container */
+#slides {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+/* Individual slide */
+.slide {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  display: block;
-  preserveAspectRatio: xMidYMid meet;
+  display: none;
   user-select: none;
-  -webkit-user-select: none;
-  /* pointer-events controlled by parent class */
 }
 
-/* When drawing is enabled, SVG should not intercept clicks */
-.drawing-enabled #slide {
+.slide.active {
+  display: block;
+}
+
+/* Interaction modes */
+.drawing-enabled .slide {
   pointer-events: none;
 }
 
-/* When drawing is disabled, SVG becomes interactive */
-.drawing-disabled #slide {
+.drawing-disabled .slide {
   pointer-events: auto;
 }
 
-/* Ensure video inside SVG can receive events */
-#slide foreignObject {
+.slide foreignObject {
   pointer-events: bounding-box;
 }
 
-/* Both canvases sit on top, also fill container */
+/* Canvas */
 canvas {
   position: absolute;
   top: 0;
@@ -52,23 +58,20 @@ canvas {
   cursor: crosshair;
 }
 
-/* Persistent canvas — transparent so the slide shows through */
 #c {
   background: transparent;
 }
 
-/* Temp canvas — also transparent, pointer-events off */
 #tmp {
   pointer-events: none;
 }
 
-/* When drawing is disabled, both canvases become transparent to mouse events */
 canvas.drawing-disabled {
   pointer-events: none !important;
   cursor: default;
 }
 
-/* Stroke counter badge — stays bottom‑right of the drawing area */
+/* Badge */
 #stroke-count {
   position: absolute;
   bottom: 8px;
@@ -80,7 +83,6 @@ canvas.drawing-disabled {
   border-radius: 10px;
   pointer-events: none;
   transition: background 0.15s, color 0.15s;
-  user-select: none;
 }
 
 #stroke-count.has-strokes {
