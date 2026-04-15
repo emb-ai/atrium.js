@@ -157,7 +157,8 @@ el.addEventListener('contextmenu', function(e) {
     });
   });
 
-  if (closestIdx !== -1) {
+  var THRESHOLD = 20; // px
+  if (closestIdx !== -1 && Math.sqrt(closestDist) <= THRESHOLD) {
     strokes.splice(closestIdx, 1);
     redrawAll();
 
