@@ -1,15 +1,12 @@
-// Persistent canvas — committed strokes live here
 var el = document.getElementById('c');
 var ctx = el.getContext('2d');
 
-// Temporary canvas — only the current in-progress stroke
 var tmp = document.createElement('canvas');
 var tctx = tmp.getContext('2d');
 el.parentNode.appendChild(tmp);
 
 var isDrawing = false;
 var points = [];
-var rafPending = false;
 
 function setupCanvas() {
   var dpr = window.devicePixelRatio || 1;
@@ -42,25 +39,23 @@ function getPos(e) {
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-function drawStroke(context, pts) {
-  if (pts.length < 2) return;
-  context.beginPath();
-  context.moveTo(pts[0].x, pts[0].y);
-  for (var i = 1; i < pts.length - 1; i++) {
-    var midX = (pts[i].x + pts[i + 1].x) / 2;
-    var midY = (pts[i].y + pts[i + 1].y) / 2;
-    context.quadraticCurveTo(pts[i].x, pts[i].y, midX, midY);
-  }
-  var last = pts[pts.length - 1];
-  context.lineTo(last.x, last.y);
-  context.stroke();
-}
+// Draw only the latest segment onto the given context (no clear)
+function appendSegment(context, pts) {
+  var len = pts.length;
+  if (len < 3) return;
 
-function render() {
-  rafPending = false;
-  var dpr = window.devicePixelRatio || 1;
-  tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
-  drawStroke(tctx, points);
+  // Connect previous midpoint → new midpoint via the second-to-last point
+  var prev = pts[len - 2];
+  var curr = pts[len - 1];
+  var prevMidX = (pts[len - 3].x + prev.x) / 2;
+  var prevMidY = (pts[len - 3].y + prev.y) / 2;
+  var midX = (prev.x + curr.x) / 2;
+  var midY = (prev.y + curr.y) / 2;
+
+  context.beginPath();
+  context.moveTo(prevMidX, prevMidY);
+  context.quadraticCurveTo(prev.x, prev.y, midX, midY);
+  context.stroke();
 }
 
 el.onmousedown = function(e) {
@@ -68,27 +63,22 @@ el.onmousedown = function(e) {
   points = [getPos(e)];
 };
 
-// Use pointermove for lower-latency input on supported browsers
 el.addEventListener('pointermove', function(e) {
   if (!isDrawing) return;
   points.push(getPos(e));
-
-  // Batch redraws to animation frames — avoids redundant redraws
-  if (!rafPending) {
-    rafPending = true;
-    requestAnimationFrame(render);
-  }
+  // Draw the new segment immediately — no RAF, no clear
+  appendSegment(tctx, points);
 });
 
 el.onmouseup = function() {
   if (!isDrawing) return;
   isDrawing = false;
 
-  // Commit the current stroke to the persistent canvas
-  drawStroke(ctx, points);
-
-  // Clear the temp canvas
+  // Commit temp canvas pixels onto the persistent canvas
   var dpr = window.devicePixelRatio || 1;
+  ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
+
+  // Clear temp canvas
   tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
   points = [];
 };
