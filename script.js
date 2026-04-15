@@ -135,7 +135,39 @@ el.onmouseup = function(e) {
   updateStrokeCount();
 };
 
-// --- Ctrl+Z: delete last stroke ---
+// --- Right-click: delete stroke closest to click position ---
+
+el.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  if (strokes.length === 0) return;
+
+  var pos = getPos(e);
+  var closestIdx = -1;
+  var closestDist = Infinity;
+
+  strokes.forEach(function(pts, i) {
+    pts.forEach(function(p) {
+      var dx = p.x - pos.x;
+      var dy = p.y - pos.y;
+      var d = dx * dx + dy * dy;
+      if (d < closestDist) {
+        closestDist = d;
+        closestIdx = i;
+      }
+    });
+  });
+
+  if (closestIdx !== -1) {
+    strokes.splice(closestIdx, 1);
+    redrawAll();
+
+    var badge = document.getElementById('stroke-count');
+    if (badge) {
+      badge.classList.add('flash');
+      setTimeout(function() { badge.classList.remove('flash'); }, 300);
+    }
+  }
+});
 
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.key === 'z') {
