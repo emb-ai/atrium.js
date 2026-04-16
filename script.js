@@ -28,6 +28,33 @@ function showSlide(idx) {
   redrawAll();
 }
 
+// ─── Preload SVGs into slide divs ─────────────────────────────────────────────
+async function preloadSlides() {
+  const slideElements = [...slides];
+  const promises = slideElements.map(async (slide, index) => {
+    const src = slide.dataset.src;
+    if (!src) return;
+    try {
+      const response = await fetch(src);
+      const svgText = await response.text();
+      // Parse and inject SVG content
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+      const svgRoot = svgDoc.documentElement;
+      // Preserve original attributes (e.g., viewBox)
+      slide.innerHTML = ''; // clear placeholder
+      slide.appendChild(svgRoot);
+    } catch (err) {
+      console.error(`Failed to load slide ${index + 1}:`, err);
+      slide.textContent = `⚠️ Failed to load ${src}`;
+    }
+  });
+  await Promise.all(promises);
+  // Activate first slide after all are ready
+  slides[0].classList.add('active');
+  setupCanvas(); // now canvas can be sized correctly
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let isDrawing = false;
 let isErasing = false;
@@ -151,7 +178,7 @@ function toggleFullscreen() {
   }
 }
 
-// ─── Finalize current stroke (used on global mouseup) ─────────────────────────
+// ─── Finalize current stroke ─────────────────────────────────────────────────
 function finalizeDrawing() {
   if (!isDrawing) return;
 
@@ -166,71 +193,68 @@ function finalizeDrawing() {
   currentPoints = [];
 }
 
-// ─── Events ───────────────────────────────────────────────────────────────────
-setupCanvas();
-window.addEventListener('resize', setupCanvas);
+// ─── Events & Initialization ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await preloadSlides();
 
-el.addEventListener('mousedown', e => {
-  if (!drawingEnabled) return;
+  // Canvas setup after slides are ready
+  setupCanvas();
+  window.addEventListener('resize', setupCanvas);
 
-  if (e.button === 2) {
-    isErasing = true;
-    tryDeleteClosest(getPos(e));
-  } else if (e.button === 0) {
-    isDrawing = true;
-    currentPoints = [getPos(e)];
-  }
-});
+  el.addEventListener('mousedown', e => {
+    if (!drawingEnabled) return;
+    if (e.button === 2) {
+      isErasing = true;
+      tryDeleteClosest(getPos(e));
+    } else if (e.button === 0) {
+      isDrawing = true;
+      currentPoints = [getPos(e)];
+    }
+  });
 
-el.addEventListener('pointermove', e => {
-  if (!drawingEnabled) return;
+  el.addEventListener('pointermove', e => {
+    if (!drawingEnabled) return;
+    if (isErasing) {
+      tryDeleteClosest(getPos(e));
+    } else if (isDrawing) {
+      currentPoints.push(getPos(e));
+      appendLiveSegment(currentPoints);
+    }
+  });
 
-  if (isErasing) {
-    tryDeleteClosest(getPos(e));
-  } else if (isDrawing) {
-    currentPoints.push(getPos(e));
-    appendLiveSegment(currentPoints);
-  }
-});
+  window.addEventListener('mouseup', () => {
+    if (!drawingEnabled) return;
+    if (isDrawing) {
+      finalizeDrawing();
+      isDrawing = false;
+    }
+    if (isErasing) {
+      isErasing = false;
+    }
+  });
 
-// Global mouseup to catch releases outside the canvas
-window.addEventListener('mouseup', e => {
-  if (!drawingEnabled) return;
+  el.addEventListener('contextmenu', e => e.preventDefault());
 
-  if (isDrawing) {
-    finalizeDrawing();
-    isDrawing = false;
-  }
-  if (isErasing) {
-    isErasing = false;
-  }
-});
-
-el.addEventListener('contextmenu', e => e.preventDefault());
-
-document.addEventListener('keydown', e => {
-  if (e.ctrlKey && e.key === 'z') {
-    e.preventDefault();
-    if (!getStrokes().length) return;
-    getStrokes().pop();
-    redrawAll();
-  }
-
-  if (e.key === 'F5') {
-    e.preventDefault();
-    toggleFullscreen();
-  }
-
-  if (e.key === 'v' || e.key === 'V') {
-    e.preventDefault();
-    toggleDrawing();
-  }
-
-  if (e.key === 'ArrowRight') {
-    showSlide(currentSlide + 1);
-  }
-
-  if (e.key === 'ArrowLeft') {
-    showSlide(currentSlide - 1);
-  }
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'z') {
+      e.preventDefault();
+      if (!getStrokes().length) return;
+      getStrokes().pop();
+      redrawAll();
+    }
+    if (e.key === 'f') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+    if (e.key === 'v' || e.key === 'V') {
+      e.preventDefault();
+      toggleDrawing();
+    }
+    if (e.key === 'ArrowRight') {
+      showSlide(currentSlide + 1);
+    }
+    if (e.key === 'ArrowLeft') {
+      showSlide(currentSlide - 1);
+    }
+  });
 });
