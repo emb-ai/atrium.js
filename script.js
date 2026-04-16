@@ -14,7 +14,7 @@ el.insertAdjacentElement('afterend', tmp);
 // ─── Slides ───────────────────────────────────────────────────────────────────
 let currentSlide = 0;
 const slides = document.querySelectorAll('.slide');
-let slidesData = Array.from(slides).map(() => []); // strokes per slide
+let slidesData = Array.from(slides).map(() => []); // normalized strokes per slide
 
 function getStrokes() {
   return slidesData[currentSlide];
@@ -37,12 +37,10 @@ async function preloadSlides() {
     try {
       const response = await fetch(src);
       const svgText = await response.text();
-      // Parse and inject SVG content
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
       const svgRoot = svgDoc.documentElement;
-      // Preserve original attributes (e.g., viewBox)
-      slide.innerHTML = ''; // clear placeholder
+      slide.innerHTML = '';
       slide.appendChild(svgRoot);
     } catch (err) {
       console.error(`Failed to load slide ${index + 1}:`, err);
@@ -50,15 +48,14 @@ async function preloadSlides() {
     }
   });
   await Promise.all(promises);
-  // Activate first slide after all are ready
   slides[0].classList.add('active');
-  setupCanvas(); // now canvas can be sized correctly
+  setupCanvas();
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let isDrawing = false;
 let isErasing = false;
-let currentPoints = [];
+let currentPoints = []; // live stroke in canvas-local CSS pixels
 let drawingEnabled = true;
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
@@ -69,16 +66,101 @@ function applyStyles(context) {
   context.strokeStyle = STROKE_STYLE;
 }
 
+function getCanvasCssSize() {
+  const rect = el.getBoundingClientRect();
+  return {
+    width: el.clientWidth || rect.width,
+    height: el.clientHeight || rect.height,
+  };
+}
+
+function getActiveSvg() {
+  return slides[currentSlide]?.querySelector('svg') || null;
+}
+
+function parsePreserveAspectRatio(svg) {
+  const raw = (svg.getAttribute('preserveAspectRatio') || 'xMidYMid meet').trim();
+  if (raw === 'none') {
+    return { align: 'none', mode: 'meet' };
+  }
+
+  const parts = raw.split(/\s+/).filter(Boolean);
+  return {
+    align: parts[0] || 'xMidYMid',
+    mode: parts[1] || 'meet',
+  };
+}
+
+function getReferenceBox() {
+  const canvasSize = getCanvasCssSize();
+  const svg = getActiveSvg();
+
+  if (!svg) {
+    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
+  }
+
+  const viewBox = svg.viewBox?.baseVal;
+  const vbWidth = viewBox?.width || parseFloat(svg.getAttribute('width')) || canvasSize.width;
+  const vbHeight = viewBox?.height || parseFloat(svg.getAttribute('height')) || canvasSize.height;
+
+  if (!vbWidth || !vbHeight) {
+    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
+  }
+
+  const { align, mode } = parsePreserveAspectRatio(svg);
+  if (align === 'none') {
+    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
+  }
+
+  const scale = mode === 'slice'
+    ? Math.max(canvasSize.width / vbWidth, canvasSize.height / vbHeight)
+    : Math.min(canvasSize.width / vbWidth, canvasSize.height / vbHeight);
+
+  const width = vbWidth * scale;
+  const height = vbHeight * scale;
+
+  let x = 0;
+  let y = 0;
+
+  if (align.includes('xMid')) x = (canvasSize.width - width) / 2;
+  else if (align.includes('xMax')) x = canvasSize.width - width;
+
+  if (align.includes('YMid')) y = (canvasSize.height - height) / 2;
+  else if (align.includes('YMax')) y = canvasSize.height - height;
+
+  return { x, y, width, height };
+}
+
+function normalizePoint(point, refBox) {
+  return {
+    x: refBox.width > 0 ? (point.x - refBox.x) / refBox.width : 0,
+    y: refBox.height > 0 ? (point.y - refBox.y) / refBox.height : 0,
+  };
+}
+
+function denormalizePoint(point, refBox) {
+  return {
+    x: refBox.x + point.x * refBox.width,
+    y: refBox.y + point.y * refBox.height,
+  };
+}
+
+function toScreenPoints(points) {
+  const refBox = getReferenceBox();
+  return points.map(point => denormalizePoint(point, refBox));
+}
+
 function setupCanvas() {
-  const dpr  = window.devicePixelRatio || 1;
-  const { width, height } = el.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = getCanvasCssSize();
 
   for (const canvas of [el, tmp]) {
-    canvas.width  = width  * dpr;
-    canvas.height = height * dpr;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
   }
 
   for (const context of [ctx, tctx]) {
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.scale(dpr, dpr);
     applyStyles(context);
   }
@@ -87,8 +169,8 @@ function setupCanvas() {
 }
 
 function getPos(e) {
-  const { left, top } = el.getBoundingClientRect();
-  return { x: e.clientX - left, y: e.clientY - top };
+  const rect = el.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
 // ─── Drawing ──────────────────────────────────────────────────────────────────
@@ -101,9 +183,9 @@ function drawStroke(context, pts) {
     context.lineTo(pts[1].x, pts[1].y);
   } else {
     for (let i = 2; i < pts.length; i++) {
-      const prev    = pts[i - 1];
+      const prev = pts[i - 1];
       const prevMid = { x: (pts[i - 2].x + prev.x) / 2, y: (pts[i - 2].y + prev.y) / 2 };
-      const mid     = { x: (prev.x + pts[i].x) / 2,     y: (prev.y + pts[i].y) / 2     };
+      const mid = { x: (prev.x + pts[i].x) / 2, y: (prev.y + pts[i].y) / 2 };
       context.moveTo(prevMid.x, prevMid.y);
       context.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
     }
@@ -116,9 +198,9 @@ function appendLiveSegment(pts) {
   const len = pts.length;
   if (len < 3) return;
 
-  const prev    = pts[len - 2];
+  const prev = pts[len - 2];
   const prevMid = { x: (pts[len - 3].x + prev.x) / 2, y: (pts[len - 3].y + prev.y) / 2 };
-  const mid     = { x: (prev.x + pts[len - 1].x) / 2, y: (prev.y + pts[len - 1].y) / 2 };
+  const mid = { x: (prev.x + pts[len - 1].x) / 2, y: (prev.y + pts[len - 1].y) / 2 };
 
   tctx.beginPath();
   tctx.moveTo(prevMid.x, prevMid.y);
@@ -127,10 +209,13 @@ function appendLiveSegment(pts) {
 }
 
 function redrawAll() {
-  const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, el.width / dpr, el.height / dpr);
+  const { width, height } = getCanvasCssSize();
+  ctx.clearRect(0, 0, width, height);
+  tctx.clearRect(0, 0, width, height);
   applyStyles(ctx);
-  getStrokes().forEach(pts => drawStroke(ctx, pts));
+  applyStyles(tctx);
+
+  getStrokes().forEach(points => drawStroke(ctx, toScreenPoints(points)));
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -138,11 +223,12 @@ function tryDeleteClosest(pos) {
   const strokes = getStrokes();
   if (!strokes.length) return;
 
-  let closestIdx  = -1;
+  let closestIdx = -1;
   let closestDist = Infinity;
 
-  strokes.forEach((pts, i) => {
-    for (const p of pts) {
+  strokes.forEach((points, i) => {
+    const screenPoints = toScreenPoints(points);
+    for (const p of screenPoints) {
       const d = (p.x - pos.x) ** 2 + (p.y - pos.y) ** 2;
       if (d < closestDist) {
         closestDist = d;
@@ -183,23 +269,28 @@ function finalizeDrawing() {
   if (!isDrawing) return;
 
   if (currentPoints.length > 1) {
-    getStrokes().push([...currentPoints]);
+    const refBox = getReferenceBox();
+    const normalizedStroke = currentPoints.map(point => normalizePoint(point, refBox));
+    getStrokes().push(normalizedStroke);
   }
 
-  const dpr = window.devicePixelRatio || 1;
-  ctx.drawImage(tmp, 0, 0, tmp.width, tmp.height, 0, 0, el.width / dpr, el.height / dpr);
-  tctx.clearRect(0, 0, tmp.width / dpr, tmp.height / dpr);
-
   currentPoints = [];
+  redrawAll();
 }
 
 // ─── Events & Initialization ─────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   await preloadSlides();
 
-  // Canvas setup after slides are ready
   setupCanvas();
-  window.addEventListener('resize', setupCanvas);
+  window.addEventListener('resize', () => {
+    if (isDrawing) {
+      finalizeDrawing();
+      isDrawing = false;
+    }
+    isErasing = false;
+    setupCanvas();
+  });
 
   el.addEventListener('mousedown', e => {
     if (!drawingEnabled) return;
