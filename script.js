@@ -252,8 +252,6 @@ function toggleDrawing() {
 
   el.classList.toggle('drawing-disabled', !drawingEnabled);
   tmp.classList.toggle('drawing-disabled', !drawingEnabled);
-
-  el.style.cursor = drawingEnabled ? 'crosshair' : 'default';
 }
 
 function toggleFullscreen() {

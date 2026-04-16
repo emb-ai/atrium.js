@@ -54,7 +54,16 @@ canvas {
   width: 100%;
   height: 100%;
   display: block;
-  cursor: crosshair;
+  /* cursor: url("./pencil-cursor.svg") 5 19, auto; */
+  /* cursor: url("./pencil-32.png") 2 30, auto; */
+  cursor: url("./pencil-32.png") 1 22, auto;
+  /* cursor: url("data:image/svg+xml;utf8,\ */
+/* <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>\ */
+  /* <g fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\ */
+  /*   <path d='M3 21l3-1 12-12-2-2L4 18l-1 3z' fill='white'/>\ */
+  /*   <path d='M14 4l2 2'/>\ */
+  /* </g>\ */
+/* </svg>") 2 20, auto; */
 }
 
 #c {
