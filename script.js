@@ -131,6 +131,15 @@ function setupVideoSync() {
       // (Still synced to the main video's own muted state when messages arrive,
       // but default to muted so autoplay policies allow scripted .play().)
       v.muted = true;
+
+      // Video state is driven entirely by the main window via video-sync
+      // messages. Hide the native controls so the presenter audience can't
+      // desync playback, and block pointer events so clicks/scrubs on the
+      // element can't interact with it either.
+      v.controls = false;
+      v.removeAttribute('controls');
+      v.disablePictureInPicture = true;
+      v.style.pointerEvents = 'none';
     } else {
       for (const type of events) {
         v.addEventListener(type, () => {
