@@ -6,10 +6,16 @@ html, body {
   font-family: monospace;
 }
 
+/* ─── Flex row: canvas on the left, notes sidebar on the right ─────────────── */
+body {
+  display: flex;
+  flex-direction: row;
+}
+
 .canvas-wrap {
   position: relative;
-  width: 100%;
-  height: 100%;
+  flex: 1 1 auto;
+  min-width: 0; /* allow flex child to shrink below its content size */
 }
 
 #slides {
@@ -95,4 +101,49 @@ canvas.drawing-disabled {
 #size-dot.fade {
   opacity: 0;
   transition: opacity 250ms ease-out;
+}
+
+/* ─── Notes sidebar ─────────────────────────────────────────────────────────── */
+#notes-panel {
+  /* Hidden by default; JS adds .visible.
+     Width is fixed at 20% — content scrolls inside, never stretches the panel. */
+  display: none;
+  flex: 0 0 20%;          /* fixed 20% — neither grow nor shrink */
+  width: 20%;             /* belt-and-suspenders for older engines */
+  min-width: 0;
+  box-sizing: border-box;
+  background: #181818;
+  border-left: 1px solid #2e2e2e;
+  padding: 10px 12px;
+  overflow-y: auto;       /* scroll long notes; panel height stays 100% */
+  overflow-x: hidden;
+  line-height: 1.55;
+}
+
+#notes-panel.visible {
+  display: block;
+}
+
+#notes-label {
+  display: block;
+  font-size: 10px;
+  font-family: monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #168afe;
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+#notes-content {
+  font-size: 12.5px;
+  font-family: monospace;
+  color: #c8c8c8;
+  white-space: pre-wrap;   /* preserve explicit line breaks */
+  word-break: break-word;  /* wrap long words inside the fixed panel width */
+}
+
+/* Notes panel must never appear in the mirrored presenter window */
+body.is-presenter #notes-panel {
+  display: none !important;
 }

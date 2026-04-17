@@ -11,6 +11,9 @@ const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
 const channel = new BroadcastChannel('slides-presenter');
 let presenterWin = null;
 
+// Mark the presenter window so CSS can suppress the notes panel there.
+if (IS_PRESENTER) document.body.classList.add('is-presenter');
+
 function isFrozen() {
   // Freeze auto-clears if the presenter window has been closed.
   if (frozen && (!presenterWin || presenterWin.closed)) {
@@ -50,6 +53,9 @@ let currentSlide = 0;
 const slides = document.querySelectorAll('.slide');
 let slidesData = Array.from(slides).map(() => []); // normalized strokes per slide
 
+// Speaker notes — read directly from data-notes="..." on each .slide div.
+const slideNotes = Array.from(slides).map(s => s.dataset.notes || '');
+
 function getStrokes() {
   return slidesData[currentSlide];
 }
@@ -61,12 +67,12 @@ function showSlide(idx) {
   slides[currentSlide].classList.add('active');
   redrawAll();
   broadcastState();
+  updateNotesContent(); // keep notes bar in sync with the current slide
 }
 
 // ─── Preload SVGs into slide divs ─────────────────────────────────────────────
 async function preloadSlides() {
-  const slideElements = [...slides];
-  const promises = slideElements.map(async (slide, index) => {
+  const promises = [...slides].map(async (slide, index) => {
     const src = slide.dataset.src;
     if (!src) return;
     try {
@@ -74,15 +80,15 @@ async function preloadSlides() {
       const svgText = await response.text();
       const parser = new DOMParser();
       const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
-      const svgRoot = svgDoc.documentElement;
       slide.innerHTML = '';
-      slide.appendChild(svgRoot);
+      slide.appendChild(svgDoc.documentElement);
     } catch (err) {
       console.error(`Failed to load slide ${index + 1}:`, err);
       slide.textContent = `⚠️ Failed to load ${src}`;
     }
   });
   await Promise.all(promises);
+
   slides[0].classList.add('active');
   setupCanvas();
 }
@@ -481,16 +487,58 @@ function finalizeDrawing() {
   broadcastState();
 }
 
-// ─── Presenter window: open and respond ──────────────────────────────────────
+// ─── Speaker notes ────────────────────────────────────────────────────────────
+// Notes are read from <desc id="slide-notes"> inside each slide's SVG.
+// The panel is only shown in the main window while a presenter window is open.
+
+const notesPanel   = document.getElementById('notes-panel');
+const notesContent = document.getElementById('notes-content');
+
+function updateNotesContent() {
+  if (IS_PRESENTER) return;
+  const text = slideNotes[currentSlide] || '';
+  notesContent.textContent = text || '(no notes for this slide)';
+}
+
+function showNotes() {
+  if (IS_PRESENTER) return;
+  updateNotesContent();
+  notesPanel.classList.add('visible');
+  // Reflow the canvas after the panel appears so its bounding box is correct.
+  setupCanvas();
+}
+
+function hideNotes() {
+  if (IS_PRESENTER) return;
+  notesPanel.classList.remove('visible');
+  setupCanvas();
+}
+
+// ─── Presenter window: open / toggle and respond ──────────────────────────────
 function openPresenter() {
   if (IS_PRESENTER) return;
+
+  // Toggle: if already open, close it and hide notes.
   if (presenterWin && !presenterWin.closed) {
-    presenterWin.focus();
+    presenterWin.close();
+    presenterWin = null;
+    hideNotes();
     return;
   }
+
   const url = location.pathname + '?presenter=1' + location.hash;
-  presenterWin = window.open(url, 'presenter', 'width=960,height=600');
+  presenterWin = window.open(url, 'presenter');
+  showNotes();
 }
+
+// Poll for the presenter window being closed externally (e.g. the user shuts
+// the window directly instead of pressing P again).
+setInterval(() => {
+  if (!IS_PRESENTER && presenterWin && presenterWin.closed) {
+    presenterWin = null;
+    hideNotes();
+  }
+}, 500);
 
 let slidesReady = false;
 let pendingState = null;
@@ -546,7 +594,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   if (IS_PRESENTER) {
-    // Presenter mode: no input, request initial state and listen for updates.
+    // Presenter window: no input, no notes panel, just mirror state.
     el.style.pointerEvents = 'none';
     tmp.style.pointerEvents = 'none';
     el.style.cursor = 'default';
@@ -620,7 +668,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (e.key === 'p' || e.key === 'P') {
       e.preventDefault();
-      openPresenter();
+      openPresenter(); // opens or closes (toggles) the presenter window
     }
     if (e.key === 'ArrowRight') {
       showSlide(currentSlide + 1);
