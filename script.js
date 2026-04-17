@@ -83,6 +83,98 @@ async function preloadSlides() {
   setupCanvas();
 }
 
+// ─── Video sync between main and presenter windows ───────────────────────────
+function getAllVideos() {
+  // Returns [{slideIdx, videoIdx, el}] for every <video> found in the slides,
+  // identified by (slide index, index of <video> within that slide).
+  const out = [];
+  slides.forEach((slide, slideIdx) => {
+    const videos = slide.querySelectorAll('video');
+    videos.forEach((v, videoIdx) => out.push({ slideIdx, videoIdx, el: v }));
+  });
+  return out;
+}
+
+function findVideo(slideIdx, videoIdx) {
+  const slide = slides[slideIdx];
+  if (!slide) return null;
+  return slide.querySelectorAll('video')[videoIdx] || null;
+}
+
+// Called from presenter-applied syncs so our own mirrored .play()/.pause()
+// doesn't bounce back as another broadcast.
+let suppressVideoBroadcast = false;
+
+function broadcastVideoState(slideIdx, videoIdx, videoEl) {
+  if (IS_PRESENTER) return;
+  if (isFrozen()) return;
+  if (!presenterWin || presenterWin.closed) return;
+  channel.postMessage({
+    type: 'video-sync',
+    slideIdx,
+    videoIdx,
+    paused: videoEl.paused,
+    currentTime: videoEl.currentTime,
+    playbackRate: videoEl.playbackRate,
+    muted: videoEl.muted,
+    volume: videoEl.volume,
+  });
+}
+
+function setupVideoSync() {
+  const videos = getAllVideos();
+  const events = ['play', 'pause', 'seeked', 'ratechange', 'volumechange', 'ended'];
+
+  for (const { slideIdx, videoIdx, el: v } of videos) {
+    if (IS_PRESENTER) {
+      // Presenter videos should be muted — the lecturer's physical voice carries.
+      // (Still synced to the main video's own muted state when messages arrive,
+      // but default to muted so autoplay policies allow scripted .play().)
+      v.muted = true;
+    } else {
+      for (const type of events) {
+        v.addEventListener(type, () => {
+          if (suppressVideoBroadcast) return;
+          broadcastVideoState(slideIdx, videoIdx, v);
+        });
+      }
+    }
+  }
+}
+
+function applyVideoSync(msg) {
+  const v = findVideo(msg.slideIdx, msg.videoIdx);
+  if (!v) return;
+
+  suppressVideoBroadcast = true;
+  try {
+    // Align currentTime only if it has drifted — avoid fighting normal playback.
+    const drift = Math.abs(v.currentTime - msg.currentTime);
+    if (drift > 0.3) {
+      v.currentTime = msg.currentTime;
+    }
+
+    v.playbackRate = msg.playbackRate;
+    // Keep presenter muted regardless of main window's mute state,
+    // so the presenter doesn't double audio from the lecturer's machine.
+    v.muted = true;
+
+    if (msg.paused && !v.paused) {
+      v.pause();
+    } else if (!msg.paused && v.paused) {
+      // .play() returns a promise that may reject under autoplay policy.
+      const p = v.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(err => console.warn('Presenter video play() rejected:', err));
+      }
+    }
+  } finally {
+    // Release suppression on next tick — the DOM will fire sync events in
+    // response to our programmatic changes.
+    setTimeout(() => { suppressVideoBroadcast = false; }, 0);
+  }
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let isDrawing = false;
 let isErasing = false;
@@ -361,6 +453,9 @@ channel.addEventListener('message', (event) => {
         return;
       }
       applyPresenterState(msg);
+    } else if (msg.type === 'video-sync') {
+      if (!slidesReady) return;
+      applyVideoSync(msg);
     }
   } else {
     if (msg.type === 'request-state') {
@@ -386,6 +481,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await preloadSlides();
 
   setupCanvas();
+  setupVideoSync();
 
   window.addEventListener('resize', () => {
     if (isDrawing) {
