@@ -54,7 +54,16 @@ canvas {
   width: 100%;
   height: 100%;
   display: block;
+  cursor: default;
+}
+
+/* Cursor states applied on #c based on interaction mode */
+#c.cursor-pencil {
   cursor: url("./pencil.svg") 8 21, auto;
+}
+
+#c.cursor-eraser {
+  cursor: url("./eraser.svg") 9 22, auto;
 }
 
 #c {

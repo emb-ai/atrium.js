@@ -252,6 +252,8 @@ function toggleDrawing() {
 
   el.classList.toggle('drawing-disabled', !drawingEnabled);
   tmp.classList.toggle('drawing-disabled', !drawingEnabled);
+
+  updateCursor();
 }
 
 function toggleFullscreen() {
@@ -259,6 +261,17 @@ function toggleFullscreen() {
     document.documentElement.requestFullscreen();
   } else {
     document.exitFullscreen();
+  }
+}
+
+// ─── Cursor state ─────────────────────────────────────────────────────────────
+function updateCursor() {
+  el.classList.remove('cursor-pencil', 'cursor-eraser');
+  if (!drawingEnabled) return;
+  if (isErasing) {
+    el.classList.add('cursor-eraser');
+  } else {
+    el.classList.add('cursor-pencil');
   }
 }
 
@@ -281,6 +294,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await preloadSlides();
 
   setupCanvas();
+  updateCursor();
   window.addEventListener('resize', () => {
     if (isDrawing) {
       finalizeDrawing();
@@ -294,6 +308,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!drawingEnabled) return;
     if (e.button === 2) {
       isErasing = true;
+      updateCursor();
       tryDeleteClosest(getPos(e));
     } else if (e.button === 0) {
       isDrawing = true;
@@ -319,6 +334,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (isErasing) {
       isErasing = false;
+      updateCursor();
     }
   });
 
