@@ -3,6 +3,27 @@ const ERASE_THRESHOLD = 20;
 const STROKE_STYLE = '#168afe';
 const LINE_WIDTH = 5;
 
+// ─── Presenter mode ───────────────────────────────────────────────────────────
+const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
+const channel = new BroadcastChannel('slides-presenter');
+let presenterWin = null;
+
+function broadcastState() {
+  if (IS_PRESENTER) return;
+  let liveStrokeNormalized = null;
+  if (isDrawing && currentPoints.length > 0) {
+    const refBox = getReferenceBox();
+    liveStrokeNormalized = currentPoints.map(p => normalizePoint(p, refBox));
+  }
+  channel.postMessage({
+    type: 'state',
+    currentSlide,
+    slidesData,
+    drawingEnabled,
+    liveStroke: liveStrokeNormalized,
+  });
+}
+
 // ─── Canvas setup ─────────────────────────────────────────────────────────────
 const el  = document.getElementById('c');
 const ctx = el.getContext('2d');
@@ -26,6 +47,7 @@ function showSlide(idx) {
   currentSlide = idx;
   slides[currentSlide].classList.add('active');
   redrawAll();
+  broadcastState();
 }
 
 // ─── Preload SVGs into slide divs ─────────────────────────────────────────────
@@ -57,6 +79,7 @@ let isDrawing = false;
 let isErasing = false;
 let currentPoints = []; // live stroke in canvas-local CSS pixels
 let drawingEnabled = true;
+let mirroredLiveStroke = null; // presenter-only: normalized live stroke from main window
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 function applyStyles(context) {
@@ -216,6 +239,10 @@ function redrawAll() {
   applyStyles(tctx);
 
   getStrokes().forEach(points => drawStroke(ctx, toScreenPoints(points)));
+
+  if (mirroredLiveStroke && mirroredLiveStroke.length > 1) {
+    drawStroke(ctx, toScreenPoints(mirroredLiveStroke));
+  }
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -240,6 +267,7 @@ function tryDeleteClosest(pos) {
   if (closestIdx !== -1 && Math.sqrt(closestDist) <= ERASE_THRESHOLD) {
     strokes.splice(closestIdx, 1);
     redrawAll();
+    broadcastState();
   }
 }
 
@@ -254,6 +282,7 @@ function toggleDrawing() {
   tmp.classList.toggle('drawing-disabled', !drawingEnabled);
 
   updateCursor();
+  broadcastState();
 }
 
 function toggleFullscreen() {
@@ -287,6 +316,52 @@ function finalizeDrawing() {
 
   currentPoints = [];
   redrawAll();
+  broadcastState();
+}
+
+// ─── Presenter window: open and respond ──────────────────────────────────────
+function openPresenter() {
+  if (IS_PRESENTER) return;
+  if (presenterWin && !presenterWin.closed) {
+    presenterWin.focus();
+    return;
+  }
+  const url = location.pathname + '?presenter=1' + location.hash;
+  presenterWin = window.open(url, 'presenter', 'width=960,height=600');
+}
+
+let slidesReady = false;
+let pendingState = null;
+
+channel.addEventListener('message', (event) => {
+  const msg = event.data;
+  if (!msg) return;
+
+  if (IS_PRESENTER) {
+    if (msg.type === 'state') {
+      if (!slidesReady) {
+        pendingState = msg;
+        return;
+      }
+      applyPresenterState(msg);
+    }
+  } else {
+    if (msg.type === 'request-state') {
+      broadcastState();
+    }
+  }
+});
+
+function applyPresenterState(msg) {
+  if (msg.currentSlide !== currentSlide) {
+    slides[currentSlide].classList.remove('active');
+    currentSlide = msg.currentSlide;
+    slides[currentSlide].classList.add('active');
+  }
+  slidesData = msg.slidesData;
+  drawingEnabled = msg.drawingEnabled;
+  mirroredLiveStroke = msg.liveStroke || null;
+  redrawAll();
 }
 
 // ─── Events & Initialization ─────────────────────────────────────────────────
@@ -294,7 +369,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await preloadSlides();
 
   setupCanvas();
-  updateCursor();
+
   window.addEventListener('resize', () => {
     if (isDrawing) {
       finalizeDrawing();
@@ -303,6 +378,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     isErasing = false;
     setupCanvas();
   });
+
+  if (IS_PRESENTER) {
+    // Presenter mode: no input, request initial state and listen for updates.
+    el.style.pointerEvents = 'none';
+    tmp.style.pointerEvents = 'none';
+    el.style.cursor = 'default';
+    slidesReady = true;
+    if (pendingState) {
+      applyPresenterState(pendingState);
+      pendingState = null;
+    }
+    channel.postMessage({ type: 'request-state' });
+    return;
+  }
+
+  // ─── Main window input handlers ─────────────────────────────────────────────
+  updateCursor();
 
   el.addEventListener('mousedown', e => {
     if (!drawingEnabled) return;
@@ -323,6 +415,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else if (isDrawing) {
       currentPoints.push(getPos(e));
       appendLiveSegment(currentPoints);
+      broadcastState();
     }
   });
 
@@ -346,6 +439,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!getStrokes().length) return;
       getStrokes().pop();
       redrawAll();
+      broadcastState();
     }
     if (e.key === 'f') {
       e.preventDefault();
@@ -354,6 +448,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'v' || e.key === 'V') {
       e.preventDefault();
       toggleDrawing();
+    }
+    if (e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      openPresenter();
     }
     if (e.key === 'ArrowRight') {
       showSlide(currentSlide + 1);
