@@ -1,7 +1,10 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ERASE_THRESHOLD = 20;
 const STROKE_STYLE = '#168afe';
-const LINE_WIDTH = 5;
+const LINE_WIDTH_MIN = 1;
+const LINE_WIDTH_MAX = 40;
+const LINE_WIDTH_STEP = 2;
+let lineWidth = 5;
 
 // ─── Presenter mode ───────────────────────────────────────────────────────────
 const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
@@ -30,6 +33,7 @@ function broadcastState() {
     slidesData,
     drawingEnabled,
     liveStroke: liveStrokeNormalized,
+    liveStrokeWidth: lineWidth,
   });
 }
 
@@ -192,9 +196,43 @@ let drawingEnabled = true;
 let frozen = false;
 let mirroredLiveStroke = null; // presenter-only: normalized live stroke from main window
 
+// ─── Size preview dot ─────────────────────────────────────────────────────────
+let cursorPos = { x: -999, y: -999 };
+let dotHideTimer = null;
+
+const sizeDot = document.createElement('div');
+sizeDot.id = 'size-dot';
+document.querySelector('.canvas-wrap').appendChild(sizeDot);
+
+function showSizeDot() {
+  const r = lineWidth / 2;
+
+  sizeDot.style.width  = lineWidth + 'px';
+  sizeDot.style.height = lineWidth + 'px';
+  sizeDot.style.left   = (cursorPos.x - r) + 'px';
+  sizeDot.style.top    = (cursorPos.y - r) + 'px';
+
+  // Re-trigger transition: remove fade class, force reflow, re-show
+  sizeDot.classList.remove('fade');
+  sizeDot.classList.add('visible');
+  void sizeDot.offsetWidth; // reflow
+
+  clearTimeout(dotHideTimer);
+  dotHideTimer = setTimeout(() => {
+    sizeDot.classList.add('fade');
+  }, 350);
+}
+
+function changeStrokeSize(delta) {
+  lineWidth = Math.min(LINE_WIDTH_MAX, Math.max(LINE_WIDTH_MIN, lineWidth + delta));
+  applyStyles(ctx);
+  applyStyles(tctx);
+  if (cursorPos.x !== -999) showSizeDot();
+}
+
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 function applyStyles(context) {
-  context.lineWidth   = LINE_WIDTH;
+  context.lineWidth   = lineWidth;
   context.lineJoin    = 'round';
   context.lineCap     = 'round';
   context.strokeStyle = STROKE_STYLE;
@@ -349,10 +387,16 @@ function redrawAll() {
   applyStyles(ctx);
   applyStyles(tctx);
 
-  getStrokes().forEach(points => drawStroke(ctx, toScreenPoints(points)));
+  getStrokes().forEach(stroke => {
+    ctx.lineWidth = stroke.width;
+    drawStroke(ctx, toScreenPoints(stroke.points));
+  });
+  ctx.lineWidth = lineWidth;
 
-  if (mirroredLiveStroke && mirroredLiveStroke.length > 1) {
-    drawStroke(ctx, toScreenPoints(mirroredLiveStroke));
+  if (mirroredLiveStroke && mirroredLiveStroke.points.length > 1) {
+    ctx.lineWidth = mirroredLiveStroke.width;
+    drawStroke(ctx, toScreenPoints(mirroredLiveStroke.points));
+    ctx.lineWidth = lineWidth;
   }
 }
 
@@ -364,8 +408,8 @@ function tryDeleteClosest(pos) {
   let closestIdx = -1;
   let closestDist = Infinity;
 
-  strokes.forEach((points, i) => {
-    const screenPoints = toScreenPoints(points);
+  strokes.forEach((stroke, i) => {
+    const screenPoints = toScreenPoints(stroke.points);
     for (const p of screenPoints) {
       const d = (p.x - pos.x) ** 2 + (p.y - pos.y) ** 2;
       if (d < closestDist) {
@@ -429,7 +473,7 @@ function finalizeDrawing() {
   if (currentPoints.length > 1) {
     const refBox = getReferenceBox();
     const normalizedStroke = currentPoints.map(point => normalizePoint(point, refBox));
-    getStrokes().push(normalizedStroke);
+    getStrokes().push({ points: normalizedStroke, width: lineWidth });
   }
 
   currentPoints = [];
@@ -481,7 +525,7 @@ function applyPresenterState(msg) {
   }
   slidesData = msg.slidesData;
   drawingEnabled = msg.drawingEnabled;
-  mirroredLiveStroke = msg.liveStroke || null;
+  mirroredLiveStroke = msg.liveStroke ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth } : null;
   redrawAll();
 }
 
@@ -532,6 +576,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   el.addEventListener('pointermove', e => {
+    cursorPos = getPos(e);
     if (!drawingEnabled) return;
     if (isErasing) {
       tryDeleteClosest(getPos(e));
@@ -582,6 +627,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (e.key === 'ArrowLeft') {
       showSlide(currentSlide - 1);
+    }
+    if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      changeStrokeSize(LINE_WIDTH_STEP);
+    }
+    if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      changeStrokeSize(-LINE_WIDTH_STEP);
     }
   });
 });

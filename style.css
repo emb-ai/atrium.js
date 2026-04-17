@@ -78,3 +78,21 @@ canvas.drawing-disabled {
   pointer-events: none !important;
   cursor: default;
 }
+
+#size-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: #168afe;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(0, 0);
+}
+
+#size-dot.visible {
+  opacity: 1;
+}
+
+#size-dot.fade {
+  opacity: 0;
+  transition: opacity 250ms ease-out;
+}
