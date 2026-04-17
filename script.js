@@ -8,8 +8,17 @@ const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
 const channel = new BroadcastChannel('slides-presenter');
 let presenterWin = null;
 
+function isFrozen() {
+  // Freeze auto-clears if the presenter window has been closed.
+  if (frozen && (!presenterWin || presenterWin.closed)) {
+    frozen = false;
+  }
+  return frozen;
+}
+
 function broadcastState() {
   if (IS_PRESENTER) return;
+  if (isFrozen()) return;
   let liveStrokeNormalized = null;
   if (isDrawing && currentPoints.length > 0) {
     const refBox = getReferenceBox();
@@ -79,6 +88,7 @@ let isDrawing = false;
 let isErasing = false;
 let currentPoints = []; // live stroke in canvas-local CSS pixels
 let drawingEnabled = true;
+let frozen = false;
 let mirroredLiveStroke = null; // presenter-only: normalized live stroke from main window
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
@@ -285,11 +295,18 @@ function toggleDrawing() {
   broadcastState();
 }
 
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
+function toggleFreeze() {
+  // Freeze only applies when a presenter window is open.
+  if (!presenterWin || presenterWin.closed) {
+    if (frozen) {
+      frozen = false;
+    }
+    return;
+  }
+  frozen = !frozen;
+  if (!frozen) {
+    // On unfreeze, immediately sync presenter to current state.
+    broadcastState();
   }
 }
 
@@ -398,6 +415,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   el.addEventListener('mousedown', e => {
     if (!drawingEnabled) return;
+    if (isFrozen()) return;
     if (e.button === 2) {
       isErasing = true;
       updateCursor();
@@ -436,14 +454,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === 'z') {
       e.preventDefault();
+      if (isFrozen()) return;
       if (!getStrokes().length) return;
       getStrokes().pop();
       redrawAll();
       broadcastState();
     }
-    if (e.key === 'f') {
+    if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();
-      toggleFullscreen();
+      toggleFreeze();
     }
     if (e.key === 'v' || e.key === 'V') {
       e.preventDefault();
