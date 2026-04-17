@@ -1,0 +1,28 @@
+Presenting:
+* allow pdf uploading
+* fix load and rewind of large videos
+* laser mode
+
+Speaker mode:
+* slide progress i / N
+* timer
+* freeze indicator
+* toolbar for all functions
+* (?) overlay mode for notes
+
+Drawing:
+* color picker
+* whiteboard/blackboard mode with infinite slides
+* (?) export drawings to svg
+* (?) persist drawings in localstorage
+* (?) saving all action timestamps for full reproduction of slideshow
+
+Documentation:
+* idea
+* usage description (text)
+* demonstration of functionality (video)
+* functionality
+* running locally
+* example for pdf
+* example for touying with touying-exporter
+
