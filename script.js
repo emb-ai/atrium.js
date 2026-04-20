@@ -1025,14 +1025,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupCanvas();
   setupVideoSync();
 
-  window.addEventListener('resize', () => {
+  const handleCanvasResize = () => {
     if (isDrawing) {
       finalizeDrawing();
       isDrawing = false;
     }
     isErasing = false;
     setupCanvas();
-  });
+  };
+
+  // ResizeObserver fires after layout settles and reacts to the canvas's
+  // actual rendered size — so it catches tiling-WM resizes where the window
+  // `resize` event can fire before the flex layout (notes sidebar sibling)
+  // has fully recomputed, which would otherwise leave the backing store
+  // mismatched with the CSS size until the next manual resize.
+  new ResizeObserver(handleCanvasResize).observe(el);
+  window.addEventListener('resize', handleCanvasResize);
 
   if (IS_PRESENTER) {
     // Presenter window: no input, no notes panel, just mirror state.
