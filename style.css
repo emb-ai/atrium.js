@@ -72,6 +72,12 @@ canvas {
   cursor: url("./eraser.svg") 9 22, auto;
 }
 
+/* Laser mode: hide the native cursor — the bright red head dot drawn on
+   the canvas stands in for the pointer. */
+body.laser-mode #c {
+  cursor: none;
+}
+
 #c {
   background: transparent;
 }

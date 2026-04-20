@@ -6,6 +6,15 @@ const LINE_WIDTH_MAX = 40;
 const LINE_WIDTH_STEP = 2;
 let lineWidth = 5;
 
+// Laser pointer: short-living red trace that follows the cursor.
+// Width is fixed (independent of the drawing stroke size controlled by +/-).
+const LASER_STYLE = '#dc2626';
+const LASER_WIDTH = 10;
+const LASER_TTL = 200;
+// EMA factor applied to incoming samples before they hit the trail.
+// Lower = smoother but laggier; 0.5 is a good balance.
+const LASER_SMOOTH_ALPHA = 0.5;
+
 // ─── Presenter mode ───────────────────────────────────────────────────────────
 const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
 const channel = new BroadcastChannel('slides-presenter');
@@ -42,6 +51,7 @@ function broadcastState() {
     drawingEnabled,
     liveStroke: liveStrokeNormalized,
     liveStrokeWidth: lineWidth,
+    laserPoints,
   });
 }
 
@@ -70,6 +80,9 @@ function showSlide(idx) {
   slides[currentSlide].classList.remove('active');
   currentSlide = idx;
   slides[currentSlide].classList.add('active');
+  // Laser trail is per-viewBox and ephemeral — drop it on slide change so
+  // stale points don't briefly render against the new slide's coordinate space.
+  laserPoints = [];
   redrawAll();
   broadcastState();
   updateNotesContent(); // keep notes bar in sync with the current slide
@@ -206,6 +219,10 @@ let currentPoints = []; // live stroke in canvas-local CSS pixels
 let drawingEnabled = true;
 let frozen = false;
 let mirroredLiveStroke = null; // presenter-only: normalized live stroke from main window
+let laserMode = false;
+let laserPoints = []; // [{x, y, t}] — normalized coords with Date.now() timestamps
+let mirroredLaserPoints = []; // presenter-only: mirrored from main window
+let laserRafId = null;
 
 // ─── Size preview dot ─────────────────────────────────────────────────────────
 let cursorPos = { x: -999, y: -999 };
@@ -431,6 +448,193 @@ function redrawAll() {
   updateProgressIndicator();
 }
 
+// ─── Laser pointer ────────────────────────────────────────────────────────────
+// Laser mode reuses the `tmp` canvas as an overlay (it's otherwise only used
+// for live stroke segments, and the two modes are mutually exclusive).
+// Each point carries a Date.now() timestamp so the main and presenter windows
+// can fade the trail independently without needing tick-synchronized messages.
+function pruneLaser(points) {
+  const cutoff = Date.now() - LASER_TTL;
+  let firstAlive = 0;
+  while (firstAlive < points.length && points[firstAlive].t < cutoff) firstAlive++;
+  if (firstAlive > 0) points.splice(0, firstAlive);
+}
+
+// Densify a polyline by routing it through quadratic curves that interpolate
+// the midpoints of consecutive segments (same smoothing the drawing tool
+// uses). Removes the kinks between raw pointer samples.
+function smoothPolyline(pts, steps) {
+  const N = pts.length;
+  if (N < 3) return pts.slice();
+  const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const out = [pts[0]];
+  let start = pts[0];
+  for (let i = 1; i < N - 1; i++) {
+    const control = pts[i];
+    const end = mid(pts[i], pts[i + 1]);
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      const it = 1 - t;
+      out.push({
+        x: it * it * start.x + 2 * it * t * control.x + t * t * end.x,
+        y: it * it * start.y + 2 * it * t * control.y + t * t * end.y,
+      });
+    }
+    start = end;
+  }
+  const last = pts[N - 1];
+  for (let s = 1; s <= steps; s++) {
+    const t = s / steps;
+    out.push({
+      x: start.x + (last.x - start.x) * t,
+      y: start.y + (last.y - start.y) * t,
+    });
+  }
+  return out;
+}
+
+function drawLaserTrail(context, points, refBox, width) {
+  if (points.length < 2) return;
+
+  // Render the trail as a tapered filled ribbon: width and alpha both go
+  // from 0 at the tail (index 0, oldest) to full at the head (last index).
+  // Drawn as a strip of filled quads that share exact vertices at their
+  // joins, which avoids the cap/overlap artifacts we'd get from stroking.
+  const rawScreen = points.map(p => denormalizePoint(p, refBox));
+  const screen = smoothPolyline(rawScreen, 4);
+  const N = screen.length;
+
+  // Per-point unit normals: average of adjacent segment normals so adjacent
+  // quads meet cleanly at a shared edge instead of a jagged step.
+  const normals = new Array(N);
+  for (let i = 0; i < N; i++) {
+    let nx = 0, ny = 0;
+    if (i > 0) {
+      const dx = screen[i].x - screen[i - 1].x;
+      const dy = screen[i].y - screen[i - 1].y;
+      const len = Math.hypot(dx, dy) || 1;
+      nx += -dy / len;
+      ny +=  dx / len;
+    }
+    if (i < N - 1) {
+      const dx = screen[i + 1].x - screen[i].x;
+      const dy = screen[i + 1].y - screen[i].y;
+      const len = Math.hypot(dx, dy) || 1;
+      nx += -dy / len;
+      ny +=  dx / len;
+    }
+    const nlen = Math.hypot(nx, ny) || 1;
+    normals[i] = { x: nx / nlen, y: ny / nlen };
+  }
+
+  context.save();
+  context.fillStyle = LASER_STYLE;
+  const half = width / 2;
+
+  for (let i = 1; i < N; i++) {
+    const r0 = (i - 1) / (N - 1);
+    const r1 =  i      / (N - 1);
+    const hw0 = half * r0;
+    const hw1 = half * r1;
+    const n0 = normals[i - 1];
+    const n1 = normals[i];
+    const p0 = screen[i - 1];
+    const p1 = screen[i];
+
+    context.globalAlpha = (r0 + r1) / 2;
+    context.beginPath();
+    context.moveTo(p0.x + n0.x * hw0, p0.y + n0.y * hw0);
+    context.lineTo(p1.x + n1.x * hw1, p1.y + n1.y * hw1);
+    context.lineTo(p1.x - n1.x * hw1, p1.y - n1.y * hw1);
+    context.lineTo(p0.x - n0.x * hw0, p0.y - n0.y * hw0);
+    context.closePath();
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawLaserHead(context, pos, width) {
+  context.save();
+  context.fillStyle = LASER_STYLE;
+  context.beginPath();
+  // Radius = stroke width / 2 so the head matches the trail thickness.
+  context.arc(pos.x, pos.y, width / 2, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function renderLaserFrame() {
+  const { width, height } = getCanvasCssSize();
+  tctx.clearRect(0, 0, width, height);
+
+  const points = IS_PRESENTER ? mirroredLaserPoints : laserPoints;
+  pruneLaser(points);
+
+  const refBox = getReferenceBox();
+  drawLaserTrail(tctx, points, refBox, LASER_WIDTH);
+
+  // Head sits at the smoothed trail tip (not the raw cursor) so the dot and
+  // the ribbon stay glued together — otherwise EMA smoothing leaves a gap
+  // between them during fast motion.
+  if (points.length > 0) {
+    drawLaserHead(tctx, denormalizePoint(points[points.length - 1], refBox), LASER_WIDTH);
+  }
+}
+
+function laserLoopActive() {
+  if (IS_PRESENTER) return mirroredLaserPoints.length > 0;
+  return laserMode || laserPoints.length > 0;
+}
+
+function laserTick() {
+  renderLaserFrame();
+  if (laserLoopActive()) {
+    laserRafId = requestAnimationFrame(laserTick);
+  } else {
+    laserRafId = null;
+    const { width, height } = getCanvasCssSize();
+    tctx.clearRect(0, 0, width, height);
+  }
+}
+
+function startLaserLoop() {
+  if (laserRafId !== null) return;
+  laserRafId = requestAnimationFrame(laserTick);
+}
+
+function pushLaserPoint(pos) {
+  const refBox = getReferenceBox();
+  const n = normalizePoint(pos, refBox);
+  // Prune first so a stale point doesn't act as the EMA reference: when
+  // the trail has fully aged out, the next sample should start fresh.
+  pruneLaser(laserPoints);
+  const last = laserPoints.length > 0 ? laserPoints[laserPoints.length - 1] : null;
+  const a = LASER_SMOOTH_ALPHA;
+  const smoothed = last
+    ? { x: last.x + a * (n.x - last.x), y: last.y + a * (n.y - last.y) }
+    : n;
+  laserPoints.push({ x: smoothed.x, y: smoothed.y, t: Date.now() });
+  broadcastState();
+}
+
+function toggleLaser() {
+  laserMode = !laserMode;
+  document.body.classList.toggle('laser-mode', laserMode);
+  // Laser needs the canvas to capture pointer events, so it can only run
+  // while drawingEnabled is true (that flag controls pointer-events on the
+  // canvas). If the user enabled laser while drawingEnabled was false
+  // (slide-interaction mode), force it back on.
+  if (laserMode && !drawingEnabled) {
+    setDrawingEnabled(true);
+  }
+  updateCursor();
+  if (laserMode) {
+    startLaserLoop();
+  }
+  // On toggle-off we keep the existing points so they fade out naturally;
+  // the RAF loop stops itself once everything expires.
+}
+
 // ─── Erasing ──────────────────────────────────────────────────────────────────
 function tryDeleteClosest(pos) {
   const strokes = getStrokes();
@@ -458,8 +662,8 @@ function tryDeleteClosest(pos) {
 }
 
 // ─── Toggles ──────────────────────────────────────────────────────────────────
-function toggleDrawing() {
-  drawingEnabled = !drawingEnabled;
+function setDrawingEnabled(on) {
+  drawingEnabled = on;
 
   document.body.classList.toggle('drawing-enabled', drawingEnabled);
   document.body.classList.toggle('drawing-disabled', !drawingEnabled);
@@ -469,6 +673,15 @@ function toggleDrawing() {
 
   updateCursor();
   broadcastState();
+}
+
+function toggleDrawing() {
+  // Mutually exclusive with laser mode.
+  if (!drawingEnabled && laserMode) {
+    laserMode = false;
+    document.body.classList.remove('laser-mode');
+  }
+  setDrawingEnabled(!drawingEnabled);
 }
 
 function toggleFreeze() {
@@ -491,6 +704,7 @@ function toggleFreeze() {
 function updateCursor() {
   el.classList.remove('cursor-pencil', 'cursor-eraser');
   if (!drawingEnabled) return;
+  if (laserMode) return; // cursor hidden via body.laser-mode CSS; head dot stands in
   if (isErasing) {
     el.classList.add('cursor-eraser');
   } else {
@@ -606,6 +820,8 @@ function applyPresenterState(msg) {
   slidesData = msg.slidesData;
   drawingEnabled = msg.drawingEnabled;
   mirroredLiveStroke = msg.liveStroke ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth } : null;
+  mirroredLaserPoints = Array.isArray(msg.laserPoints) ? msg.laserPoints : [];
+  if (mirroredLaserPoints.length > 0) startLaserLoop();
   redrawAll();
 }
 
@@ -644,6 +860,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   el.addEventListener('mousedown', e => {
     if (!drawingEnabled) return;
+    if (laserMode) return; // laser ignores clicks — trail follows pointer directly
     if (isFrozen()) return;
     if (e.button === 2) {
       isErasing = true;
@@ -658,6 +875,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   el.addEventListener('pointermove', e => {
     cursorPos = getPos(e);
     if (!drawingEnabled) return;
+    if (laserMode) {
+      if (!isFrozen()) pushLaserPoint(cursorPos);
+      return;
+    }
     if (isErasing) {
       tryDeleteClosest(getPos(e));
     } else if (isDrawing) {
@@ -669,6 +890,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('mouseup', () => {
     if (!drawingEnabled) return;
+    if (laserMode) return;
     if (isDrawing) {
       finalizeDrawing();
       isDrawing = false;
@@ -698,6 +920,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       toggleDrawing();
     }
+    if (e.key === 'l' || e.key === 'L') {
+      e.preventDefault();
+      toggleLaser();
+    }
     if (e.key === 'p' || e.key === 'P') {
       e.preventDefault();
       openPresenter(); // opens or closes (toggles) the presenter window
@@ -710,11 +936,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
-      changeStrokeSize(LINE_WIDTH_STEP);
+      // drawingEnabled gates canvas pointer-events; laser rides on top of
+      // that. Size controls should only act in pure drawing mode.
+      if (drawingEnabled && !laserMode) changeStrokeSize(LINE_WIDTH_STEP);
     }
     if (e.key === '-' || e.key === '_') {
       e.preventDefault();
-      changeStrokeSize(-LINE_WIDTH_STEP);
+      if (drawingEnabled && !laserMode) changeStrokeSize(-LINE_WIDTH_STEP);
     }
   });
 });

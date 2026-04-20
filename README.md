@@ -43,6 +43,7 @@ with the presenter window.
 | -------------- | -------------------------------------------- |
 | `←` / `→`      | Previous / next slide                        |
 | `V`            | Toggle drawing mode (lets you click slides)  |
+| `L`            | Toggle laser pointer (short-living trace)    |
 | `P`            | Open / close the presenter (mirror) window   |
 | `F`            | Freeze the presenter mirror at current state |
 | `+` / `-`      | Increase / decrease stroke size              |
