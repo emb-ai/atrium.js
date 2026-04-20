@@ -2,6 +2,8 @@
 const ERASE_THRESHOLD = 20;
 const COLOR_PALETTE = ['#168afe', '#dc2626', '#16a34a', '#f59e0b', '#a855f7', '#ffffff', '#000000'];
 const COLOR_PICKER_HIDE_DELAY = 700;
+const TOOLBAR_HIDE_DELAY = 1000;
+const TOOLBAR_REVEAL_ZONE = 120;
 const DEFAULT_STROKE_COLOR = COLOR_PALETTE[0];
 let strokeColor = DEFAULT_STROKE_COLOR;
 const LINE_WIDTH_MIN = 1;
@@ -37,6 +39,7 @@ function isFrozen() {
 
 function syncFreezeIndicator() {
   document.body.classList.toggle('is-frozen', frozen);
+  syncToolbar();
 }
 
 function broadcastState() {
@@ -107,6 +110,7 @@ function showSlide(idx) {
   redrawAll();
   broadcastState();
   updateNotesContent(); // keep notes bar in sync with the current slide
+  syncToolbar();
 }
 
 function navigate(delta) {
@@ -129,6 +133,7 @@ function navigate(delta) {
   laserPoints = [];
   redrawAll();
   broadcastState();
+  syncToolbar();
 }
 
 function toggleWhiteboard() {
@@ -142,6 +147,7 @@ function toggleWhiteboard() {
   redrawAll();
   broadcastState();
   updateNotesContent();
+  syncToolbar();
 }
 
 // ─── Preload SVGs into slide divs ─────────────────────────────────────────────
@@ -741,6 +747,7 @@ function toggleLaser() {
   }
   // On toggle-off we keep the existing points so they fade out naturally;
   // the RAF loop stops itself once everything expires.
+  syncToolbar();
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -766,6 +773,7 @@ function tryDeleteClosest(pos) {
     strokes.splice(closestIdx, 1);
     redrawAll();
     broadcastState();
+    syncToolbar();
   }
 }
 
@@ -783,13 +791,17 @@ function setDrawingEnabled(on) {
 
   updateCursor();
   broadcastState();
+  syncToolbar();
 }
 
 function toggleDrawing() {
-  // Mutually exclusive with laser mode.
-  if (!drawingEnabled && laserMode) {
+  // Mutually exclusive with laser mode: clicking pencil while laser is on
+  // switches straight into drawing, it doesn't just clear laser.
+  if (laserMode) {
     laserMode = false;
     document.body.classList.remove('laser-mode');
+    setDrawingEnabled(true);
+    return;
   }
   setDrawingEnabled(!drawingEnabled);
 }
@@ -808,6 +820,127 @@ function toggleFreeze() {
     // On unfreeze, immediately sync presenter to current state.
     broadcastState();
   }
+}
+
+// ─── Speaker toolbar ──────────────────────────────────────────────────────────
+// Every keyboard shortcut is mirrored as a toolbar button so features are
+// discoverable without memorizing the key map. Lives only in the main window.
+const toolbarEl = document.getElementById('toolbar');
+
+function syncToolbar() {
+  if (!toolbarEl || IS_PRESENTER) return;
+  const btn = action => toolbarEl.querySelector(`[data-action="${action}"]`);
+  const presenterOpen = !!(presenterWin && !presenterWin.closed);
+
+  let prevDisabled, nextDisabled;
+  if (whiteboardMode) {
+    prevDisabled = whiteboardCurrent === 0;
+    nextDisabled = whiteboardCurrent >= whiteboardSlides.length - 1
+      && whiteboardSlides[whiteboardCurrent].length === 0;
+  } else {
+    prevDisabled = currentSlide === 0;
+    nextDisabled = currentSlide >= slides.length - 1;
+  }
+  const prevBtn = btn('prev');
+  if (prevBtn) prevBtn.disabled = prevDisabled;
+  const nextBtn = btn('next');
+  if (nextBtn) nextBtn.disabled = nextDisabled;
+
+  btn('draw')?.classList.toggle('active', drawingEnabled && !laserMode);
+  btn('laser')?.classList.toggle('active', laserMode);
+  btn('whiteboard')?.classList.toggle('active', whiteboardMode);
+  btn('presenter')?.classList.toggle('active', presenterOpen);
+  btn('freeze')?.classList.toggle('active', frozen);
+
+  const colorBtn = btn('color');
+  if (colorBtn) {
+    colorBtn.disabled = !drawingEnabled || laserMode;
+    const dot = colorBtn.querySelector('.tb-color-dot');
+    if (dot) dot.style.background = strokeColor;
+  }
+  for (const action of ['size-down', 'size-up']) {
+    const b = btn(action);
+    if (b) b.disabled = !drawingEnabled || laserMode;
+  }
+
+  const freezeBtn = btn('freeze');
+  if (freezeBtn) freezeBtn.disabled = !presenterOpen;
+}
+
+let toolbarHideTimer = null;
+let toolbarHovered = false;
+
+function showToolbar() {
+  if (!toolbarEl || IS_PRESENTER) return;
+  if (isDrawing || isErasing) return;
+  toolbarEl.classList.remove('tb-hidden');
+  scheduleToolbarHide();
+}
+
+function scheduleToolbarHide() {
+  if (!toolbarEl || IS_PRESENTER) return;
+  clearTimeout(toolbarHideTimer);
+  toolbarHideTimer = null;
+  if (toolbarHovered) return;
+  toolbarHideTimer = setTimeout(() => {
+    toolbarHideTimer = null;
+    toolbarEl.classList.add('tb-hidden');
+  }, TOOLBAR_HIDE_DELAY);
+}
+
+function wireToolbar() {
+  if (!toolbarEl || IS_PRESENTER) return;
+  const actions = {
+    prev:        () => navigate(-1),
+    next:        () => navigate(1),
+    draw:        () => toggleDrawing(),
+    laser:       () => toggleLaser(),
+    color:       () => { if (drawingEnabled && !laserMode) toggleColorPicker(); },
+    'size-down': () => { if (drawingEnabled && !laserMode) changeStrokeSize(-LINE_WIDTH_STEP); },
+    'size-up':   () => { if (drawingEnabled && !laserMode) changeStrokeSize(LINE_WIDTH_STEP); },
+    undo:        () => {
+      if (isFrozen()) return;
+      if (!getStrokes().length) return;
+      getStrokes().pop();
+      redrawAll();
+      broadcastState();
+      syncToolbar();
+    },
+    whiteboard:  () => toggleWhiteboard(),
+    presenter:   () => openPresenter(),
+    freeze:      () => toggleFreeze(),
+  };
+
+  toolbarEl.addEventListener('click', e => {
+    const btn = e.target.closest('.tb-btn');
+    if (!btn || btn.disabled) return;
+    const fn = actions[btn.dataset.action];
+    if (!fn) return;
+    fn();
+    // Drop focus so the next space/enter doesn't re-trigger the button and
+    // eat a keyboard shortcut.
+    btn.blur();
+    syncToolbar();
+    showToolbar();
+  });
+
+  toolbarEl.addEventListener('mouseenter', () => {
+    toolbarHovered = true;
+    clearTimeout(toolbarHideTimer);
+    toolbarHideTimer = null;
+    toolbarEl.classList.remove('tb-hidden');
+  });
+  toolbarEl.addEventListener('mouseleave', () => {
+    toolbarHovered = false;
+    scheduleToolbarHide();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (e.clientY >= window.innerHeight - TOOLBAR_REVEAL_ZONE) showToolbar();
+  }, { passive: true });
+
+  syncToolbar();
+  scheduleToolbarHide();
 }
 
 // ─── Color picker ─────────────────────────────────────────────────────────────
@@ -859,6 +992,7 @@ function selectColor(c) {
   applyStyles(ctx);
   applyStyles(tctx);
   syncColorPickerSelection();
+  syncToolbar();
   scheduleColorPickerHide();
 }
 
@@ -926,6 +1060,7 @@ function finalizeDrawing() {
   currentPoints = [];
   redrawAll();
   broadcastState();
+  syncToolbar();
 }
 
 // ─── Speaker notes ────────────────────────────────────────────────────────────
@@ -972,6 +1107,7 @@ function openPresenter() {
     frozen = false;
     syncFreezeIndicator();
     hideNotes();
+    syncToolbar();
     return;
   }
 
@@ -980,6 +1116,7 @@ function openPresenter() {
   const url = location.pathname + '?' + params.toString() + location.hash;
   presenterWin = window.open(url, 'presenter');
   showNotes();
+  syncToolbar();
 }
 
 // Poll for the presenter window being closed externally (e.g. the user shuts
@@ -990,6 +1127,7 @@ setInterval(() => {
     frozen = false;
     syncFreezeIndicator();
     hideNotes();
+    syncToolbar();
   }
 }, 500);
 
@@ -1083,6 +1221,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // ─── Main window input handlers ─────────────────────────────────────────────
   buildColorPicker();
+  wireToolbar();
   updateCursor();
 
   el.addEventListener('mousedown', e => {
@@ -1150,6 +1289,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       getStrokes().pop();
       redrawAll();
       broadcastState();
+      syncToolbar();
     }
     if (e.key === 'f' || e.key === 'F') {
       e.preventDefault();

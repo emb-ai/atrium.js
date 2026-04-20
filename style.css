@@ -421,6 +421,127 @@ body.is-presenter #color-picker {
   display: none !important;
 }
 
+/* ─── Speaker toolbar (main window only) ────────────────────────────────────── */
+#toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.55),
+    rgba(175, 182, 195, 0.45)
+  );
+  border: 1px solid rgba(11, 18, 32, 0.18);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 28px -8px rgba(143, 196, 255, 0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  font-family: monospace;
+  color: #0b1220;
+  user-select: none;
+  z-index: 12;
+  /* Buttons opt-in to pointer events individually so drags between buttons
+     pass through to the canvas (drawing/laser keep working). */
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+#toolbar.tb-hidden {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+}
+
+#toolbar.tb-hidden .tb-btn { pointer-events: none; }
+
+body.is-presenter #toolbar { display: none !important; }
+
+#toolbar .tb-btn {
+  pointer-events: auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #0b1220;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  transition: background 120ms ease-out, transform 120ms ease-out, opacity 120ms ease-out;
+}
+
+#toolbar .tb-btn:hover:not(:disabled) {
+  background: rgba(11, 18, 32, 0.12);
+}
+
+#toolbar .tb-btn.active {
+  background: #0b1220;
+  color: #f3f5fa;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+#toolbar .tb-btn.active:hover:not(:disabled) {
+  background: #3d3d3d;
+}
+
+#toolbar .tb-btn[data-action="freeze"] {
+  display: none;
+  color: #0a2a6b;
+}
+
+body.presenter-open #toolbar .tb-btn[data-action="freeze"] {
+  display: inline-flex;
+}
+
+#toolbar .tb-btn[data-action="freeze"].active {
+  color: #8fc4ff;
+}
+
+#toolbar .tb-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#toolbar .tb-btn:focus-visible {
+  outline: 2px solid rgba(22, 138, 254, 0.7);
+  outline-offset: 1px;
+}
+
+#toolbar .tb-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+#toolbar .tb-sep {
+  pointer-events: none;
+  width: 1px;
+  height: 16px;
+  background: rgba(11, 18, 32, 0.25);
+  margin: 0 4px;
+}
+
+#toolbar .tb-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #168afe;
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
 @keyframes freeze-pulse {
   0%   { box-shadow: 0 0 0 0   rgba(143, 196, 255, 0.55); }
   70%  { box-shadow: 0 0 0 10px rgba(143, 196, 255, 0);   }
