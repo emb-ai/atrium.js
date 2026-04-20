@@ -391,6 +391,24 @@ function appendLiveSegment(pts) {
   tctx.stroke();
 }
 
+const progressIndicator = document.getElementById('progress-indicator');
+const progressCurrent = progressIndicator.querySelector('.progress-current');
+const progressTotal = progressIndicator.querySelector('.progress-total');
+
+function updateProgressIndicator() {
+  if (IS_PRESENTER) return;
+  progressCurrent.textContent = String(currentSlide + 1);
+  progressTotal.textContent = String(slides.length);
+
+  // Anchor to the bottom-right corner of the SVG's rendered area (the slide
+  // content), not the canvas-wrap container. The element uses
+  // transform: translate(-100%, -100%) so (left, top) is its bottom-right.
+  const refBox = getReferenceBox();
+  const inset = 18;
+  progressIndicator.style.left = (refBox.x + refBox.width - inset) + 'px';
+  progressIndicator.style.top  = (refBox.y + refBox.height - inset) + 'px';
+}
+
 function redrawAll() {
   const { width, height } = getCanvasCssSize();
   ctx.clearRect(0, 0, width, height);
@@ -409,6 +427,8 @@ function redrawAll() {
     drawStroke(ctx, toScreenPoints(mirroredLiveStroke.points));
     ctx.lineWidth = lineWidth;
   }
+
+  updateProgressIndicator();
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -510,6 +530,7 @@ function showNotes() {
   if (IS_PRESENTER) return;
   updateNotesContent();
   notesPanel.classList.add('visible');
+  document.body.classList.add('presenter-open');
   // Reflow the canvas after the panel appears so its bounding box is correct.
   setupCanvas();
 }
@@ -517,6 +538,7 @@ function showNotes() {
 function hideNotes() {
   if (IS_PRESENTER) return;
   notesPanel.classList.remove('visible');
+  document.body.classList.remove('presenter-open');
   setupCanvas();
 }
 
