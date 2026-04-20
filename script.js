@@ -434,6 +434,22 @@ function getPos(e) {
   return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
+function isInsideRefBox(pos) {
+  const b = getReferenceBox();
+  return pos.x >= b.x && pos.x <= b.x + b.width
+      && pos.y >= b.y && pos.y <= b.y + b.height;
+}
+
+// Clip subsequent drawing to the active slide / whiteboard area. Must be
+// paired with context.save()/restore() by the caller so the clip doesn't
+// leak into later unrelated draws.
+function applyRefBoxClip(context) {
+  const b = getReferenceBox();
+  context.beginPath();
+  context.rect(b.x, b.y, b.width, b.height);
+  context.clip();
+}
+
 // ─── Drawing ──────────────────────────────────────────────────────────────────
 function drawStroke(context, pts) {
   if (pts.length < 2) return;
@@ -463,10 +479,13 @@ function appendLiveSegment(pts) {
   const prevMid = { x: (pts[len - 3].x + prev.x) / 2, y: (pts[len - 3].y + prev.y) / 2 };
   const mid = { x: (prev.x + pts[len - 1].x) / 2, y: (prev.y + pts[len - 1].y) / 2 };
 
+  tctx.save();
+  applyRefBoxClip(tctx);
   tctx.beginPath();
   tctx.moveTo(prevMid.x, prevMid.y);
   tctx.quadraticCurveTo(prev.x, prev.y, mid.x, mid.y);
   tctx.stroke();
+  tctx.restore();
 }
 
 const progressIndicator = document.getElementById('progress-indicator');
@@ -510,21 +529,24 @@ function redrawAll() {
   applyStyles(ctx);
   applyStyles(tctx);
 
+  ctx.save();
+  applyRefBoxClip(ctx);
+
   getStrokes().forEach(stroke => {
     ctx.lineWidth = stroke.width;
     ctx.strokeStyle = stroke.color || DEFAULT_STROKE_COLOR;
     drawStroke(ctx, toScreenPoints(stroke.points));
   });
-  ctx.lineWidth = lineWidth;
-  ctx.strokeStyle = strokeColor;
 
   if (mirroredLiveStroke && mirroredLiveStroke.points.length > 1) {
     ctx.lineWidth = mirroredLiveStroke.width;
     ctx.strokeStyle = mirroredLiveStroke.color || DEFAULT_STROKE_COLOR;
     drawStroke(ctx, toScreenPoints(mirroredLiveStroke.points));
-    ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = strokeColor;
   }
+
+  ctx.restore();
+  ctx.lineWidth = lineWidth;
+  ctx.strokeStyle = strokeColor;
 
   updateProgressIndicator();
   updateWhiteboardPagePosition();
@@ -653,6 +675,8 @@ function renderLaserFrame() {
   pruneLaser(points);
 
   const refBox = getReferenceBox();
+  tctx.save();
+  applyRefBoxClip(tctx);
   drawLaserTrail(tctx, points, refBox, LASER_WIDTH);
 
   // Head sits at the smoothed trail tip (not the raw cursor) so the dot and
@@ -661,6 +685,7 @@ function renderLaserFrame() {
   if (points.length > 0) {
     drawLaserHead(tctx, denormalizePoint(points[points.length - 1], refBox), LASER_WIDTH);
   }
+  tctx.restore();
 }
 
 function laserLoopActive() {
@@ -1064,13 +1089,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!drawingEnabled) return;
     if (laserMode) return; // laser ignores clicks — trail follows pointer directly
     if (isFrozen()) return;
+    const pos = getPos(e);
+    // The canvas covers the whole wrap (including the letterbox around the
+    // slide/whiteboard); reject input that starts outside the SVG viewBox
+    // area so you can't paint into the empty margins.
+    if (!isInsideRefBox(pos)) return;
     if (e.button === 2) {
       isErasing = true;
       updateCursor();
-      tryDeleteClosest(getPos(e));
+      tryDeleteClosest(pos);
     } else if (e.button === 0) {
       isDrawing = true;
-      currentPoints = [getPos(e)];
+      currentPoints = [pos];
     }
     closeColorPicker();
   });
@@ -1078,14 +1108,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   el.addEventListener('pointermove', e => {
     cursorPos = getPos(e);
     if (!drawingEnabled) return;
+    const inside = isInsideRefBox(cursorPos);
     if (laserMode) {
-      if (!isFrozen()) pushLaserPoint(cursorPos);
+      // Only feed the laser trail while inside — rendering is clipped anyway,
+      // but this also keeps us from broadcasting useless outside points.
+      if (!isFrozen() && inside) pushLaserPoint(cursorPos);
       return;
     }
     if (isErasing) {
-      tryDeleteClosest(getPos(e));
+      if (inside) tryDeleteClosest(cursorPos);
     } else if (isDrawing) {
-      currentPoints.push(getPos(e));
+      // Keep appending even while the cursor is outside — the render-time
+      // clip hides the outside portion, and this preserves stroke continuity
+      // for arcs that briefly dip past the edge.
+      currentPoints.push(cursorPos);
       appendLiveSegment(currentPoints);
       broadcastState();
     }
