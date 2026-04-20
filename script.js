@@ -1,6 +1,9 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ERASE_THRESHOLD = 20;
-const STROKE_STYLE = '#168afe';
+const COLOR_PALETTE = ['#168afe', '#dc2626', '#16a34a', '#f59e0b', '#a855f7', '#ffffff', '#000000'];
+const COLOR_PICKER_HIDE_DELAY = 700;
+const DEFAULT_STROKE_COLOR = COLOR_PALETTE[0];
+let strokeColor = DEFAULT_STROKE_COLOR;
 const LINE_WIDTH_MIN = 1;
 const LINE_WIDTH_MAX = 40;
 const LINE_WIDTH_STEP = 2;
@@ -51,6 +54,7 @@ function broadcastState() {
     drawingEnabled,
     liveStroke: liveStrokeNormalized,
     liveStrokeWidth: lineWidth,
+    liveStrokeColor: strokeColor,
     laserPoints,
   });
 }
@@ -239,6 +243,7 @@ function showSizeDot() {
   sizeDot.style.height = lineWidth + 'px';
   sizeDot.style.left   = (cursorPos.x - r) + 'px';
   sizeDot.style.top    = (cursorPos.y - r) + 'px';
+  sizeDot.style.background = strokeColor;
 
   // Re-trigger transition: remove fade class, force reflow, re-show
   sizeDot.classList.remove('fade');
@@ -263,7 +268,7 @@ function applyStyles(context) {
   context.lineWidth   = lineWidth;
   context.lineJoin    = 'round';
   context.lineCap     = 'round';
-  context.strokeStyle = STROKE_STYLE;
+  context.strokeStyle = strokeColor;
 }
 
 function getCanvasCssSize() {
@@ -435,14 +440,18 @@ function redrawAll() {
 
   getStrokes().forEach(stroke => {
     ctx.lineWidth = stroke.width;
+    ctx.strokeStyle = stroke.color || DEFAULT_STROKE_COLOR;
     drawStroke(ctx, toScreenPoints(stroke.points));
   });
   ctx.lineWidth = lineWidth;
+  ctx.strokeStyle = strokeColor;
 
   if (mirroredLiveStroke && mirroredLiveStroke.points.length > 1) {
     ctx.lineWidth = mirroredLiveStroke.width;
+    ctx.strokeStyle = mirroredLiveStroke.color || DEFAULT_STROKE_COLOR;
     drawStroke(ctx, toScreenPoints(mirroredLiveStroke.points));
     ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = strokeColor;
   }
 
   updateProgressIndicator();
@@ -620,6 +629,7 @@ function pushLaserPoint(pos) {
 function toggleLaser() {
   laserMode = !laserMode;
   document.body.classList.toggle('laser-mode', laserMode);
+  if (laserMode) closeColorPicker();
   // Laser needs the canvas to capture pointer events, so it can only run
   // while drawingEnabled is true (that flag controls pointer-events on the
   // canvas). If the user enabled laser while drawingEnabled was false
@@ -671,6 +681,8 @@ function setDrawingEnabled(on) {
   el.classList.toggle('drawing-disabled', !drawingEnabled);
   tmp.classList.toggle('drawing-disabled', !drawingEnabled);
 
+  if (!drawingEnabled) closeColorPicker();
+
   updateCursor();
   broadcastState();
 }
@@ -700,6 +712,97 @@ function toggleFreeze() {
   }
 }
 
+// ─── Color picker ─────────────────────────────────────────────────────────────
+const colorPicker     = document.getElementById('color-picker');
+const swatchContainer = colorPicker.querySelector('.cp-swatches');
+const colorInput      = colorPicker.querySelector('.cp-input');
+const customWrap      = colorPicker.querySelector('.cp-custom');
+
+function buildColorPicker() {
+  COLOR_PALETTE.forEach(c => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cp-swatch';
+    b.style.setProperty('--c', c);
+    b.dataset.color = c;
+    b.setAttribute('aria-label', `Color ${c}`);
+    b.addEventListener('click', () => selectColor(c));
+    swatchContainer.appendChild(b);
+  });
+  colorInput.value = strokeColor;
+  colorInput.addEventListener('input', e => selectColor(e.target.value));
+
+  // Hovering the toolbar pauses the auto-hide countdown; leaving it restarts
+  // it (but only if a color was selected, i.e. auto-hide was armed).
+  colorPicker.addEventListener('mouseenter', () => {
+    pickerHovered = true;
+    clearTimeout(pickerHideTimer);
+    pickerHideTimer = null;
+  });
+  colorPicker.addEventListener('mouseleave', () => {
+    pickerHovered = false;
+    if (pickerHideArmed) scheduleColorPickerHide();
+  });
+
+  syncColorPickerSelection();
+}
+
+function syncColorPickerSelection() {
+  const isPreset = COLOR_PALETTE.includes(strokeColor);
+  swatchContainer.querySelectorAll('.cp-swatch').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.color === strokeColor);
+  });
+  customWrap.classList.toggle('selected', !isPreset);
+  if (!isPreset) colorInput.value = strokeColor;
+}
+
+function selectColor(c) {
+  strokeColor = c;
+  applyStyles(ctx);
+  applyStyles(tctx);
+  syncColorPickerSelection();
+  scheduleColorPickerHide();
+}
+
+let pickerHideTimer = null;
+let pickerHideArmed = false;
+let pickerHovered = false;
+
+function scheduleColorPickerHide() {
+  pickerHideArmed = true;
+  // Pause the countdown while the mouse is over the toolbar; mouseleave will
+  // re-invoke this to start it.
+  if (pickerHovered) return;
+  clearTimeout(pickerHideTimer);
+  pickerHideTimer = setTimeout(() => {
+    pickerHideTimer = null;
+    closeColorPicker();
+  }, COLOR_PICKER_HIDE_DELAY);
+}
+
+function isColorPickerOpen() {
+  return document.body.classList.contains('color-picker-open');
+}
+
+function openColorPicker() {
+  pickerHideArmed = false;
+  document.body.classList.add('color-picker-open');
+  colorPicker.setAttribute('aria-hidden', 'false');
+}
+
+function closeColorPicker() {
+  clearTimeout(pickerHideTimer);
+  pickerHideTimer = null;
+  pickerHideArmed = false;
+  document.body.classList.remove('color-picker-open');
+  colorPicker.setAttribute('aria-hidden', 'true');
+}
+
+function toggleColorPicker() {
+  if (isColorPickerOpen()) closeColorPicker();
+  else openColorPicker();
+}
+
 // ─── Cursor state ─────────────────────────────────────────────────────────────
 function updateCursor() {
   el.classList.remove('cursor-pencil', 'cursor-eraser');
@@ -719,7 +822,7 @@ function finalizeDrawing() {
   if (currentPoints.length > 1) {
     const refBox = getReferenceBox();
     const normalizedStroke = currentPoints.map(point => normalizePoint(point, refBox));
-    getStrokes().push({ points: normalizedStroke, width: lineWidth });
+    getStrokes().push({ points: normalizedStroke, width: lineWidth, color: strokeColor });
   }
 
   currentPoints = [];
@@ -819,7 +922,9 @@ function applyPresenterState(msg) {
   }
   slidesData = msg.slidesData;
   drawingEnabled = msg.drawingEnabled;
-  mirroredLiveStroke = msg.liveStroke ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth } : null;
+  mirroredLiveStroke = msg.liveStroke
+    ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor || DEFAULT_STROKE_COLOR }
+    : null;
   mirroredLaserPoints = Array.isArray(msg.laserPoints) ? msg.laserPoints : [];
   if (mirroredLaserPoints.length > 0) startLaserLoop();
   redrawAll();
@@ -856,6 +961,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ─── Main window input handlers ─────────────────────────────────────────────
+  buildColorPicker();
   updateCursor();
 
   el.addEventListener('mousedown', e => {
@@ -870,6 +976,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       isDrawing = true;
       currentPoints = [getPos(e)];
     }
+    closeColorPicker();
   });
 
   el.addEventListener('pointermove', e => {
@@ -923,6 +1030,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'l' || e.key === 'L') {
       e.preventDefault();
       toggleLaser();
+    }
+    if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      if (drawingEnabled && !laserMode) toggleColorPicker();
+    }
+    if (e.key === 'Escape') {
+      if (isColorPickerOpen()) {
+        e.preventDefault();
+        closeColorPicker();
+      }
     }
     if (e.key === 'p' || e.key === 'P') {
       e.preventDefault();

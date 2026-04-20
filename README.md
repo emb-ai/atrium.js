@@ -46,6 +46,7 @@ with the presenter window.
 | `L`            | Toggle laser pointer (short-living trace)    |
 | `P`            | Open / close the presenter (mirror) window   |
 | `F`            | Freeze the presenter mirror at current state |
+| `C`            | Toggle stroke color picker (in drawing mode) |
 | `+` / `-`      | Increase / decrease stroke size              |
 | `Ctrl+Z`       | Undo last stroke on current slide            |
 | Left mouse     | Draw                                         |

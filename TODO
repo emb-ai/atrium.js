@@ -8,7 +8,6 @@ Speaker mode:
 * (?) overlay mode for notes
 
 Drawing:
-* color picker
 * whiteboard/blackboard mode with infinite slides
 * (?) export drawings to svg
 * (?) persist drawings in localstorage

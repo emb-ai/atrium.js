@@ -281,6 +281,128 @@ body:not(.is-presenter).presenter-open #progress-indicator {
   color: rgba(11, 18, 32, 0.75);
 }
 
+/* ─── Color picker ──────────────────────────────────────────────────────────── */
+#color-picker {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translate(-50%, -8px);
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.55),
+    rgba(175, 182, 195, 0.45)
+  );
+  border: 1px solid rgba(11, 18, 32, 0.18);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 28px -8px rgba(143, 196, 255, 0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  font-family: monospace;
+  color: #0b1220;
+  user-select: none;
+  opacity: 0;
+  z-index: 11;
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+body.color-picker-open:not(.is-presenter) #color-picker {
+  display: inline-flex;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Nudge the freeze indicator down if both pills are visible at once. */
+body.color-picker-open.is-frozen:not(.is-presenter) #freeze-indicator {
+  top: 58px;
+}
+
+#color-picker .cp-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+#color-picker .cp-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--c);
+  padding: 0;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  transition: transform 120ms ease-out;
+}
+
+#color-picker .cp-swatch:hover {
+  transform: scale(1.12);
+}
+
+#color-picker .cp-swatch.selected,
+#color-picker .cp-custom.selected .cp-custom-ring {
+  box-shadow:
+    0 0 0 2px #0b1220,
+    0 0 0 3px rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+#color-picker .cp-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(11, 18, 32, 0.25);
+}
+
+#color-picker .cp-custom {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+#color-picker .cp-custom-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  transition: transform 120ms ease-out;
+}
+
+#color-picker .cp-custom:hover .cp-custom-ring {
+  transform: scale(1.12);
+}
+
+#color-picker .cp-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+body.is-presenter #color-picker {
+  display: none !important;
+}
+
 @keyframes freeze-pulse {
   0%   { box-shadow: 0 0 0 0   rgba(143, 196, 255, 0.55); }
   70%  { box-shadow: 0 0 0 10px rgba(143, 196, 255, 0);   }

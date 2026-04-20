@@ -41,6 +41,16 @@
       <span class="freeze-label">Frozen</span>
       <span class="freeze-hint">press&nbsp;<kbd>F</kbd>&nbsp;to resume</span>
     </div>
+
+    <!-- Color picker (main window only; toggled with C in drawing mode) -->
+    <div id="color-picker" aria-hidden="true" role="toolbar" aria-label="Stroke color">
+      <div class="cp-swatches"></div>
+      <span class="cp-sep"></span>
+      <label class="cp-custom" title="Custom color">
+        <span class="cp-custom-ring"></span>
+        <input type="color" class="cp-input" aria-label="Custom color">
+      </label>
+    </div>
   </div>
 
   <!-- Speaker notes bar — visible in main window when presenter window is open -->
