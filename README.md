@@ -43,6 +43,7 @@ with the presenter window.
 | -------------- | -------------------------------------------- |
 | `←` / `→`      | Previous / next slide                        |
 | `V`            | Toggle drawing mode (lets you click slides)  |
+| `B`            | Toggle whiteboard mode (blank pages)         |
 | `L`            | Toggle laser pointer (short-living trace)    |
 | `P`            | Open / close the presenter (mirror) window   |
 | `F`            | Freeze the presenter mirror at current state |
@@ -51,6 +52,21 @@ with the presenter window.
 | `Ctrl+Z`       | Undo last stroke on current slide            |
 | Left mouse     | Draw                                         |
 | Right mouse    | Erase nearest stroke                         |
+
+### Whiteboard mode
+
+Press `B` to hide the current slide deck and switch to a stack of blank
+white pages, sized and letterboxed the same as a slide. Drawing, the color
+picker, the laser pointer, undo, and the presenter mirror all work as
+usual — strokes are just stored against the whiteboard page instead of the
+underlying slide.
+
+- `←` / `→` navigate between whiteboard pages.
+- You start on page 1. Pressing `→` from the last page appends a new blank
+  page, but only if the current page has something drawn on it — so empty
+  pages don't pile up.
+- Press `B` again to return to the slide deck. Whiteboard strokes persist
+  for the session; so do your slide annotations.
 
 ## Running locally
 

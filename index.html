@@ -25,6 +25,11 @@
       <div class="slide" data-src="slides/3.svg"></div>
     </div>
 
+    <!-- Whiteboard page: a blank "slide" shown only in whiteboard mode.
+         Positioned from JS to match getReferenceBox() so it lines up exactly
+         with the letterboxed area a real slide would occupy. -->
+    <div id="whiteboard-page" aria-hidden="true"></div>
+
     <!-- Drawing canvas (on top) -->
     <canvas id="c"></canvas>
 

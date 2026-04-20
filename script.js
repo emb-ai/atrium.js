@@ -56,6 +56,9 @@ function broadcastState() {
     liveStrokeWidth: lineWidth,
     liveStrokeColor: strokeColor,
     laserPoints,
+    whiteboardMode,
+    whiteboardSlides,
+    whiteboardCurrent,
   });
 }
 
@@ -75,7 +78,21 @@ let slidesData = Array.from(slides).map(() => []); // normalized strokes per sli
 // Speaker notes — read directly from data-notes="..." on each .slide div.
 const slideNotes = Array.from(slides).map(s => s.dataset.notes || '');
 
+// Whiteboard mode: a separate stack of blank pages with their own strokes.
+// Starts with one empty page; more are appended on-demand when navigating past
+// the last one (and only if the current page already has something drawn).
+//
+// Presenter mode reads `whiteboard=1` from the URL so it can boot straight
+// into whiteboard mode — otherwise there's a visible flash of real slides
+// between page load and the first `state` message arriving via BroadcastChannel.
+let whiteboardMode = new URLSearchParams(location.search).get('whiteboard') === '1';
+let whiteboardSlides = [[]];
+let whiteboardCurrent = 0;
+
+if (whiteboardMode) document.body.classList.add('whiteboard-mode');
+
 function getStrokes() {
+  if (whiteboardMode) return whiteboardSlides[whiteboardCurrent];
   return slidesData[currentSlide];
 }
 
@@ -90,6 +107,41 @@ function showSlide(idx) {
   redrawAll();
   broadcastState();
   updateNotesContent(); // keep notes bar in sync with the current slide
+}
+
+function navigate(delta) {
+  if (!whiteboardMode) {
+    showSlide(currentSlide + delta);
+    return;
+  }
+
+  const target = whiteboardCurrent + delta;
+  if (target < 0) return;
+
+  if (target >= whiteboardSlides.length) {
+    // Auto-append a new blank page only if the current one has ink on it —
+    // otherwise right-arrow-spamming on an empty page would pile up blanks.
+    if (whiteboardSlides[whiteboardCurrent].length === 0) return;
+    whiteboardSlides.push([]);
+  }
+
+  whiteboardCurrent = target;
+  laserPoints = [];
+  redrawAll();
+  broadcastState();
+}
+
+function toggleWhiteboard() {
+  if (isDrawing) {
+    finalizeDrawing();
+    isDrawing = false;
+  }
+  whiteboardMode = !whiteboardMode;
+  document.body.classList.toggle('whiteboard-mode', whiteboardMode);
+  laserPoints = [];
+  redrawAll();
+  broadcastState();
+  updateNotesContent();
 }
 
 // ─── Preload SVGs into slide divs ─────────────────────────────────────────────
@@ -298,6 +350,10 @@ function parsePreserveAspectRatio(svg) {
 
 function getReferenceBox() {
   const canvasSize = getCanvasCssSize();
+  // In whiteboard mode the underlying slide is hidden but we still use its
+  // SVG viewBox as the drawing area so the whiteboard "page" occupies exactly
+  // the same letterboxed region a slide would — and so strokes mirror to the
+  // presenter window with the same aspect ratio regardless of window size.
   const svg = getActiveSvg();
 
   if (!svg) {
@@ -417,10 +473,26 @@ const progressIndicator = document.getElementById('progress-indicator');
 const progressCurrent = progressIndicator.querySelector('.progress-current');
 const progressTotal = progressIndicator.querySelector('.progress-total');
 
+const whiteboardPageEl = document.getElementById('whiteboard-page');
+
+function updateWhiteboardPagePosition() {
+  if (!whiteboardMode) return;
+  const refBox = getReferenceBox();
+  whiteboardPageEl.style.left   = refBox.x + 'px';
+  whiteboardPageEl.style.top    = refBox.y + 'px';
+  whiteboardPageEl.style.width  = refBox.width + 'px';
+  whiteboardPageEl.style.height = refBox.height + 'px';
+}
+
 function updateProgressIndicator() {
   if (IS_PRESENTER) return;
-  progressCurrent.textContent = String(currentSlide + 1);
-  progressTotal.textContent = String(slides.length);
+  if (whiteboardMode) {
+    progressCurrent.textContent = String(whiteboardCurrent + 1);
+    progressTotal.textContent = String(whiteboardSlides.length);
+  } else {
+    progressCurrent.textContent = String(currentSlide + 1);
+    progressTotal.textContent = String(slides.length);
+  }
 
   // Anchor to the bottom-right corner of the SVG's rendered area (the slide
   // content), not the canvas-wrap container. The element uses
@@ -455,6 +527,7 @@ function redrawAll() {
   }
 
   updateProgressIndicator();
+  updateWhiteboardPagePosition();
 }
 
 // ─── Laser pointer ────────────────────────────────────────────────────────────
@@ -839,6 +912,10 @@ const notesContent = document.getElementById('notes-content');
 
 function updateNotesContent() {
   if (IS_PRESENTER) return;
+  if (whiteboardMode) {
+    notesContent.textContent = '(whiteboard mode)';
+    return;
+  }
   const text = slideNotes[currentSlide] || '';
   notesContent.textContent = text || '(no notes for this slide)';
 }
@@ -873,7 +950,9 @@ function openPresenter() {
     return;
   }
 
-  const url = location.pathname + '?presenter=1' + location.hash;
+  const params = new URLSearchParams({ presenter: '1' });
+  if (whiteboardMode) params.set('whiteboard', '1');
+  const url = location.pathname + '?' + params.toString() + location.hash;
   presenterWin = window.open(url, 'presenter');
   showNotes();
 }
@@ -922,6 +1001,15 @@ function applyPresenterState(msg) {
   }
   slidesData = msg.slidesData;
   drawingEnabled = msg.drawingEnabled;
+
+  // Whiteboard state (older messages may not have these fields).
+  const nextWhiteboardMode = !!msg.whiteboardMode;
+  if (nextWhiteboardMode !== whiteboardMode) {
+    whiteboardMode = nextWhiteboardMode;
+    document.body.classList.toggle('whiteboard-mode', whiteboardMode);
+  }
+  if (Array.isArray(msg.whiteboardSlides)) whiteboardSlides = msg.whiteboardSlides;
+  if (typeof msg.whiteboardCurrent === 'number') whiteboardCurrent = msg.whiteboardCurrent;
   mirroredLiveStroke = msg.liveStroke
     ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor || DEFAULT_STROKE_COLOR }
     : null;
@@ -1046,10 +1134,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       openPresenter(); // opens or closes (toggles) the presenter window
     }
     if (e.key === 'ArrowRight') {
-      showSlide(currentSlide + 1);
+      navigate(1);
     }
     if (e.key === 'ArrowLeft') {
-      showSlide(currentSlide - 1);
+      navigate(-1);
+    }
+    if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      toggleWhiteboard();
     }
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();

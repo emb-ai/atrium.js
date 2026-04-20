@@ -38,6 +38,23 @@ body {
   display: block;
 }
 
+/* Whiteboard mode: hide the underlying slide and show a blank white page
+   sized to the same letterbox the slide would occupy. */
+body.whiteboard-mode .slide.active {
+  display: none;
+}
+
+#whiteboard-page {
+  position: absolute;
+  display: none;
+  background: #ffffff;
+  pointer-events: none; /* clicks go through to the canvas below */
+}
+
+body.whiteboard-mode #whiteboard-page {
+  display: block;
+}
+
 /* Make injected SVG fill the slide */
 .slide svg {
   display: block;
@@ -260,7 +277,8 @@ body.is-frozen:not(.is-presenter) #freeze-indicator {
   transform: translate(-100%, -100%);
 }
 
-body:not(.is-presenter).presenter-open #progress-indicator {
+body:not(.is-presenter).presenter-open #progress-indicator,
+body:not(.is-presenter).whiteboard-mode #progress-indicator {
   display: inline-flex;
 }
 
