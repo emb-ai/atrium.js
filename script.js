@@ -20,17 +20,18 @@ const LASER_TTL = 200;
 // Lower = smoother but laggier; 0.5 is a good balance.
 const LASER_SMOOTH_ALPHA = 0.5;
 
-// ─── Presenter mode ───────────────────────────────────────────────────────────
-const IS_PRESENTER = new URLSearchParams(location.search).has('presenter');
-const channel = new BroadcastChannel('slides-presenter');
-let presenterWin = null;
+// ─── Speaker mode ─────────────────────────────────────────────────────────────
+const IS_SLIDESHOW = new URLSearchParams(location.search).has('slideshow');
+const channel = new BroadcastChannel('slides-speaker-mode');
+let slideshowWin = null;
 
-// Mark the presenter window so CSS can suppress the notes panel there.
-if (IS_PRESENTER) document.body.classList.add('is-presenter');
+// Mark the slideshow window so CSS can suppress the notes panel there.
+if (IS_SLIDESHOW) document.body.classList.add('is-slideshow');
+document.title = IS_SLIDESHOW ? 'Slideshow' : 'Speaker';
 
 function isFrozen() {
-  // Freeze auto-clears if the presenter window has been closed.
-  if (frozen && (!presenterWin || presenterWin.closed)) {
+  // Freeze auto-clears if the slideshow window has been closed.
+  if (frozen && (!slideshowWin || slideshowWin.closed)) {
     frozen = false;
   }
   syncFreezeIndicator();
@@ -43,7 +44,7 @@ function syncFreezeIndicator() {
 }
 
 function broadcastState() {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   if (isFrozen()) return;
   let liveStrokeNormalized = null;
   if (isDrawing && currentPoints.length > 0) {
@@ -85,9 +86,10 @@ const slideNotes = Array.from(slides).map(s => s.dataset.notes || '');
 // Starts with one empty page; more are appended on-demand when navigating past
 // the last one (and only if the current page already has something drawn).
 //
-// Presenter mode reads `whiteboard=1` from the URL so it can boot straight
-// into whiteboard mode — otherwise there's a visible flash of real slides
-// between page load and the first `state` message arriving via BroadcastChannel.
+// The slideshow window reads `whiteboard=1` from the URL so it can boot
+// straight into whiteboard mode — otherwise there's a visible flash of real
+// slides between page load and the first `state` message arriving via
+// BroadcastChannel.
 let whiteboardMode = new URLSearchParams(location.search).get('whiteboard') === '1';
 let whiteboardSlides = [[]];
 let whiteboardCurrent = 0;
@@ -173,7 +175,7 @@ async function preloadSlides() {
   setupCanvas();
 }
 
-// ─── Video sync between main and presenter windows ───────────────────────────
+// ─── Video sync between speaker and slideshow windows ───────────────────────
 function getAllVideos() {
   // Returns [{slideIdx, videoIdx, el}] for every <video> found in the slides,
   // identified by (slide index, index of <video> within that slide).
@@ -191,14 +193,14 @@ function findVideo(slideIdx, videoIdx) {
   return slide.querySelectorAll('video')[videoIdx] || null;
 }
 
-// Called from presenter-applied syncs so our own mirrored .play()/.pause()
+// Called from slideshow-applied syncs so our own mirrored .play()/.pause()
 // doesn't bounce back as another broadcast.
 let suppressVideoBroadcast = false;
 
 function broadcastVideoState(slideIdx, videoIdx, videoEl) {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   if (isFrozen()) return;
-  if (!presenterWin || presenterWin.closed) return;
+  if (!slideshowWin || slideshowWin.closed) return;
   channel.postMessage({
     type: 'video-sync',
     slideIdx,
@@ -216,14 +218,14 @@ function setupVideoSync() {
   const events = ['play', 'pause', 'seeked', 'ratechange', 'volumechange', 'ended'];
 
   for (const { slideIdx, videoIdx, el: v } of videos) {
-    if (IS_PRESENTER) {
-      // Presenter videos should be muted — the lecturer's physical voice carries.
-      // (Still synced to the main video's own muted state when messages arrive,
+    if (IS_SLIDESHOW) {
+      // Slideshow videos should be muted — the lecturer's physical voice carries.
+      // (Still synced to the speaker video's own muted state when messages arrive,
       // but default to muted so autoplay policies allow scripted .play().)
       v.muted = true;
 
-      // Video state is driven entirely by the main window via video-sync
-      // messages. Hide the native controls so the presenter audience can't
+      // Video state is driven entirely by the speaker window via video-sync
+      // messages. Hide the native controls so the slideshow audience can't
       // desync playback, and block pointer events so clicks/scrubs on the
       // element can't interact with it either.
       v.controls = false;
@@ -254,8 +256,8 @@ function applyVideoSync(msg) {
     }
 
     v.playbackRate = msg.playbackRate;
-    // Keep presenter muted regardless of main window's mute state,
-    // so the presenter doesn't double audio from the lecturer's machine.
+    // Keep slideshow muted regardless of speaker window's mute state,
+    // so the slideshow doesn't double audio from the lecturer's machine.
     v.muted = true;
 
     if (msg.paused && !v.paused) {
@@ -264,7 +266,7 @@ function applyVideoSync(msg) {
       // .play() returns a promise that may reject under autoplay policy.
       const p = v.play();
       if (p && typeof p.catch === 'function') {
-        p.catch(err => console.warn('Presenter video play() rejected:', err));
+        p.catch(err => console.warn('Slideshow video play() rejected:', err));
       }
     }
   } finally {
@@ -280,10 +282,10 @@ let isErasing = false;
 let currentPoints = []; // live stroke in canvas-local CSS pixels
 let drawingEnabled = true;
 let frozen = false;
-let mirroredLiveStroke = null; // presenter-only: normalized live stroke from main window
+let mirroredLiveStroke = null; // slideshow-only: normalized live stroke from speaker window
 let laserMode = false;
 let laserPoints = []; // [{x, y, t}] — normalized coords with Date.now() timestamps
-let mirroredLaserPoints = []; // presenter-only: mirrored from main window
+let mirroredLaserPoints = []; // slideshow-only: mirrored from speaker window
 let laserRafId = null;
 
 // ─── Size preview dot ─────────────────────────────────────────────────────────
@@ -359,7 +361,7 @@ function getReferenceBox() {
   // In whiteboard mode the underlying slide is hidden but we still use its
   // SVG viewBox as the drawing area so the whiteboard "page" occupies exactly
   // the same letterboxed region a slide would — and so strokes mirror to the
-  // presenter window with the same aspect ratio regardless of window size.
+  // slideshow window with the same aspect ratio regardless of window size.
   const svg = getActiveSvg();
 
   if (!svg) {
@@ -510,7 +512,7 @@ function updateWhiteboardPagePosition() {
 }
 
 function updateProgressIndicator() {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   if (whiteboardMode) {
     progressCurrent.textContent = String(whiteboardCurrent + 1);
     progressTotal.textContent = String(whiteboardSlides.length);
@@ -561,8 +563,9 @@ function redrawAll() {
 // ─── Laser pointer ────────────────────────────────────────────────────────────
 // Laser mode reuses the `tmp` canvas as an overlay (it's otherwise only used
 // for live stroke segments, and the two modes are mutually exclusive).
-// Each point carries a Date.now() timestamp so the main and presenter windows
-// can fade the trail independently without needing tick-synchronized messages.
+// Each point carries a Date.now() timestamp so the speaker and slideshow
+// windows can fade the trail independently without needing tick-synchronized
+// messages.
 function pruneLaser(points) {
   const cutoff = Date.now() - LASER_TTL;
   let firstAlive = 0;
@@ -677,7 +680,7 @@ function renderLaserFrame() {
   const { width, height } = getCanvasCssSize();
   tctx.clearRect(0, 0, width, height);
 
-  const points = IS_PRESENTER ? mirroredLaserPoints : laserPoints;
+  const points = IS_SLIDESHOW ? mirroredLaserPoints : laserPoints;
   pruneLaser(points);
 
   const refBox = getReferenceBox();
@@ -695,7 +698,7 @@ function renderLaserFrame() {
 }
 
 function laserLoopActive() {
-  if (IS_PRESENTER) return mirroredLaserPoints.length > 0;
+  if (IS_SLIDESHOW) return mirroredLaserPoints.length > 0;
   return laserMode || laserPoints.length > 0;
 }
 
@@ -807,8 +810,8 @@ function toggleDrawing() {
 }
 
 function toggleFreeze() {
-  // Freeze only applies when a presenter window is open.
-  if (!presenterWin || presenterWin.closed) {
+  // Freeze only applies when a slideshow window is open.
+  if (!slideshowWin || slideshowWin.closed) {
     if (frozen) {
       frozen = false;
     }
@@ -817,7 +820,7 @@ function toggleFreeze() {
   frozen = !frozen;
   syncFreezeIndicator();
   if (!frozen) {
-    // On unfreeze, immediately sync presenter to current state.
+    // On unfreeze, immediately sync slideshow to current state.
     broadcastState();
   }
 }
@@ -828,9 +831,9 @@ function toggleFreeze() {
 const toolbarEl = document.getElementById('toolbar');
 
 function syncToolbar() {
-  if (!toolbarEl || IS_PRESENTER) return;
+  if (!toolbarEl || IS_SLIDESHOW) return;
   const btn = action => toolbarEl.querySelector(`[data-action="${action}"]`);
-  const presenterOpen = !!(presenterWin && !presenterWin.closed);
+  const slideshowOpen = !!(slideshowWin && !slideshowWin.closed);
 
   let prevDisabled, nextDisabled;
   if (whiteboardMode) {
@@ -849,7 +852,7 @@ function syncToolbar() {
   btn('draw')?.classList.toggle('active', drawingEnabled && !laserMode);
   btn('laser')?.classList.toggle('active', laserMode);
   btn('whiteboard')?.classList.toggle('active', whiteboardMode);
-  btn('presenter')?.classList.toggle('active', presenterOpen);
+  btn('slideshow')?.classList.toggle('active', slideshowOpen);
   btn('freeze')?.classList.toggle('active', frozen);
 
   const colorBtn = btn('color');
@@ -864,21 +867,21 @@ function syncToolbar() {
   }
 
   const freezeBtn = btn('freeze');
-  if (freezeBtn) freezeBtn.disabled = !presenterOpen;
+  if (freezeBtn) freezeBtn.disabled = !slideshowOpen;
 }
 
 let toolbarHideTimer = null;
 let toolbarHovered = false;
 
 function showToolbar() {
-  if (!toolbarEl || IS_PRESENTER) return;
+  if (!toolbarEl || IS_SLIDESHOW) return;
   if (isDrawing || isErasing) return;
   toolbarEl.classList.remove('tb-hidden');
   scheduleToolbarHide();
 }
 
 function scheduleToolbarHide() {
-  if (!toolbarEl || IS_PRESENTER) return;
+  if (!toolbarEl || IS_SLIDESHOW) return;
   clearTimeout(toolbarHideTimer);
   toolbarHideTimer = null;
   if (toolbarHovered) return;
@@ -889,7 +892,7 @@ function scheduleToolbarHide() {
 }
 
 function wireToolbar() {
-  if (!toolbarEl || IS_PRESENTER) return;
+  if (!toolbarEl || IS_SLIDESHOW) return;
   const actions = {
     prev:        () => navigate(-1),
     next:        () => navigate(1),
@@ -907,7 +910,7 @@ function wireToolbar() {
       syncToolbar();
     },
     whiteboard:  () => toggleWhiteboard(),
-    presenter:   () => openPresenter(),
+    slideshow:   () => toggleSpeakerMode(),
     freeze:      () => toggleFreeze(),
   };
 
@@ -1065,13 +1068,13 @@ function finalizeDrawing() {
 
 // ─── Speaker notes ────────────────────────────────────────────────────────────
 // Notes are read from <desc id="slide-notes"> inside each slide's SVG.
-// The panel is only shown in the main window while a presenter window is open.
+// The panel is only shown in the speaker window while a slideshow window is open.
 
 const notesPanel   = document.getElementById('notes-panel');
 const notesContent = document.getElementById('notes-content');
 
 function updateNotesContent() {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   if (whiteboardMode) {
     notesContent.textContent = '(whiteboard mode)';
     return;
@@ -1081,29 +1084,29 @@ function updateNotesContent() {
 }
 
 function showNotes() {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   updateNotesContent();
   notesPanel.classList.add('visible');
-  document.body.classList.add('presenter-open');
+  document.body.classList.add('speaker-mode');
   // Reflow the canvas after the panel appears so its bounding box is correct.
   setupCanvas();
 }
 
 function hideNotes() {
-  if (IS_PRESENTER) return;
+  if (IS_SLIDESHOW) return;
   notesPanel.classList.remove('visible');
-  document.body.classList.remove('presenter-open');
+  document.body.classList.remove('speaker-mode');
   setupCanvas();
 }
 
-// ─── Presenter window: open / toggle and respond ──────────────────────────────
-function openPresenter() {
-  if (IS_PRESENTER) return;
+// ─── Speaker mode: open / toggle the slideshow window and respond ────────────
+function toggleSpeakerMode() {
+  if (IS_SLIDESHOW) return;
 
   // Toggle: if already open, close it and hide notes.
-  if (presenterWin && !presenterWin.closed) {
-    presenterWin.close();
-    presenterWin = null;
+  if (slideshowWin && !slideshowWin.closed) {
+    slideshowWin.close();
+    slideshowWin = null;
     frozen = false;
     syncFreezeIndicator();
     hideNotes();
@@ -1111,19 +1114,19 @@ function openPresenter() {
     return;
   }
 
-  const params = new URLSearchParams({ presenter: '1' });
+  const params = new URLSearchParams({ slideshow: '1' });
   if (whiteboardMode) params.set('whiteboard', '1');
   const url = location.pathname + '?' + params.toString() + location.hash;
-  presenterWin = window.open(url, 'presenter');
+  slideshowWin = window.open(url, 'slideshow');
   showNotes();
   syncToolbar();
 }
 
-// Poll for the presenter window being closed externally (e.g. the user shuts
-// the window directly instead of pressing P again).
+// Poll for the slideshow window being closed externally (e.g. the user shuts
+// the window directly instead of pressing S again).
 setInterval(() => {
-  if (!IS_PRESENTER && presenterWin && presenterWin.closed) {
-    presenterWin = null;
+  if (!IS_SLIDESHOW && slideshowWin && slideshowWin.closed) {
+    slideshowWin = null;
     frozen = false;
     syncFreezeIndicator();
     hideNotes();
@@ -1138,13 +1141,13 @@ channel.addEventListener('message', (event) => {
   const msg = event.data;
   if (!msg) return;
 
-  if (IS_PRESENTER) {
+  if (IS_SLIDESHOW) {
     if (msg.type === 'state') {
       if (!slidesReady) {
         pendingState = msg;
         return;
       }
-      applyPresenterState(msg);
+      applySlideshowState(msg);
     } else if (msg.type === 'video-sync') {
       if (!slidesReady) return;
       applyVideoSync(msg);
@@ -1156,7 +1159,7 @@ channel.addEventListener('message', (event) => {
   }
 });
 
-function applyPresenterState(msg) {
+function applySlideshowState(msg) {
   if (msg.currentSlide !== currentSlide) {
     slides[currentSlide].classList.remove('active');
     currentSlide = msg.currentSlide;
@@ -1205,14 +1208,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   new ResizeObserver(handleCanvasResize).observe(el);
   window.addEventListener('resize', handleCanvasResize);
 
-  if (IS_PRESENTER) {
-    // Presenter window: no input, no notes panel, just mirror state.
+  if (IS_SLIDESHOW) {
+    // Slideshow window: no input, no notes panel, just mirror state.
     el.style.pointerEvents = 'none';
     tmp.style.pointerEvents = 'none';
     el.style.cursor = 'default';
     slidesReady = true;
     if (pendingState) {
-      applyPresenterState(pendingState);
+      applySlideshowState(pendingState);
       pendingState = null;
     }
     channel.postMessage({ type: 'request-state' });
@@ -1313,9 +1316,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         closeColorPicker();
       }
     }
-    if (e.key === 'p' || e.key === 'P') {
+    if (e.key === 's' || e.key === 'S') {
       e.preventDefault();
-      openPresenter(); // opens or closes (toggles) the presenter window
+      toggleSpeakerMode(); // opens or closes (toggles) the slideshow window
     }
     if (e.key === 'ArrowRight') {
       navigate(1);

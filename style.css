@@ -166,8 +166,8 @@ canvas.drawing-disabled {
   word-break: break-word;  /* wrap long words inside the fixed panel width */
 }
 
-/* Notes panel must never appear in the mirrored presenter window */
-body.is-presenter #notes-panel {
+/* Notes panel must never appear in the mirrored slideshow window */
+body.is-slideshow #notes-panel {
   display: none !important;
 }
 
@@ -202,7 +202,7 @@ body.is-presenter #notes-panel {
   transition: opacity 180ms ease-out, transform 180ms ease-out;
 }
 
-body.is-frozen:not(.is-presenter) #freeze-indicator {
+body.is-frozen:not(.is-slideshow) #freeze-indicator {
   display: inline-flex;
   opacity: 1;
   transform: translate(-50%, 0);
@@ -250,7 +250,7 @@ body.is-frozen:not(.is-presenter) #freeze-indicator {
   vertical-align: 1px;
 }
 
-/* ─── Slide progress indicator (presenter window only) ──────────────────────── */
+/* ─── Slide progress indicator (slideshow window only) ──────────────────────── */
 #progress-indicator {
   position: absolute;
   display: none;
@@ -277,8 +277,8 @@ body.is-frozen:not(.is-presenter) #freeze-indicator {
   transform: translate(-100%, -100%);
 }
 
-body:not(.is-presenter).presenter-open #progress-indicator,
-body:not(.is-presenter).whiteboard-mode #progress-indicator {
+body:not(.is-slideshow).speaker-mode #progress-indicator,
+body:not(.is-slideshow).whiteboard-mode #progress-indicator {
   display: inline-flex;
 }
 
@@ -329,14 +329,14 @@ body:not(.is-presenter).whiteboard-mode #progress-indicator {
   transition: opacity 180ms ease-out, transform 180ms ease-out;
 }
 
-body.color-picker-open:not(.is-presenter) #color-picker {
+body.color-picker-open:not(.is-slideshow) #color-picker {
   display: inline-flex;
   opacity: 1;
   transform: translate(-50%, 0);
 }
 
 /* Nudge the freeze indicator down if both pills are visible at once. */
-body.color-picker-open.is-frozen:not(.is-presenter) #freeze-indicator {
+body.color-picker-open.is-frozen:not(.is-slideshow) #freeze-indicator {
   top: 58px;
 }
 
@@ -417,11 +417,11 @@ body.color-picker-open.is-frozen:not(.is-presenter) #freeze-indicator {
   -webkit-appearance: none;
 }
 
-body.is-presenter #color-picker {
+body.is-slideshow #color-picker {
   display: none !important;
 }
 
-/* ─── Speaker toolbar (main window only) ────────────────────────────────────── */
+/* ─── Speaker toolbar (speaker window only) ─────────────────────────────────── */
 #toolbar {
   position: absolute;
   left: 50%;
@@ -461,7 +461,7 @@ body.is-presenter #color-picker {
 
 #toolbar.tb-hidden .tb-btn { pointer-events: none; }
 
-body.is-presenter #toolbar { display: none !important; }
+body.is-slideshow #toolbar { display: none !important; }
 
 #toolbar .tb-btn {
   pointer-events: auto;
@@ -500,7 +500,7 @@ body.is-presenter #toolbar { display: none !important; }
   color: #0a2a6b;
 }
 
-body.presenter-open #toolbar .tb-btn[data-action="freeze"] {
+body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
   display: inline-flex;
 }
 

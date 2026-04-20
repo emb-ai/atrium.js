@@ -7,14 +7,14 @@ result to a second window for the audience.
 ## Idea
 
 Slides are plain SVG files. A transparent `<canvas>` sits on top of them, and
-the presenter draws freehand strokes with the mouse (or a stylus). Each
+the speaker draws freehand strokes with the mouse (or a stylus). Each
 stroke is stored per-slide in coordinates normalized to the SVG's viewBox, so
 annotations stick to the content under resize and across windows of different
 sizes.
 
-A second "presenter" window can be opened in the same browser; it mirrors the
+A second "slideshow" window can be opened in the same browser; it mirrors the
 current slide, all saved strokes, the in-progress stroke, and any embedded
-video playback via `BroadcastChannel`. The main window keeps a speaker-notes
+video playback via `BroadcastChannel`. The speaker window keeps a speaker-notes
 sidebar that is hidden in the mirror.
 
 ## Usage
@@ -35,7 +35,7 @@ Put SVG files somewhere reachable (e.g. `slides/`) and list them in
 - `data-notes` — optional speaker notes (use `&#10;` for newlines).
 
 Embedded `<video>` elements inside the SVGs are supported and kept in sync
-with the presenter window.
+with the slideshow window.
 
 ### Keyboard
 
@@ -45,8 +45,8 @@ with the presenter window.
 | `V`            | Toggle drawing mode (lets you click slides)  |
 | `B`            | Toggle whiteboard mode (blank pages)         |
 | `L`            | Toggle laser pointer (short-living trace)    |
-| `P`            | Open / close the presenter (mirror) window   |
-| `F`            | Freeze the presenter mirror at current state |
+| `S`            | Open / close the slideshow (mirror) window   |
+| `F`            | Freeze the slideshow mirror at current state |
 | `C`            | Toggle stroke color picker (in drawing mode) |
 | `+` / `-`      | Increase / decrease stroke size              |
 | `Ctrl+Z`       | Undo last stroke on current slide            |
@@ -57,7 +57,7 @@ with the presenter window.
 
 Press `B` to hide the current slide deck and switch to a stack of blank
 white pages, sized and letterboxed the same as a slide. Drawing, the color
-picker, the laser pointer, undo, and the presenter mirror all work as
+picker, the laser pointer, undo, and the slideshow mirror all work as
 usual — strokes are just stored against the whiteboard page instead of the
 underlying slide.
 
@@ -80,5 +80,5 @@ npx http-server .
 caddy file-server --listen :8000
 ```
 
-Then open <http://localhost:8000/> and press `P` to pop out the presenter
+Then open <http://localhost:8000/> and press `S` to pop out the slideshow
 window onto your second display.
