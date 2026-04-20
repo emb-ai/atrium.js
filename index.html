@@ -27,6 +27,13 @@
 
     <!-- Drawing canvas (on top) -->
     <canvas id="c"></canvas>
+
+    <!-- Freeze-mode indicator (main window only; shown while frozen) -->
+    <div id="freeze-indicator" aria-hidden="true">
+      <span class="freeze-dot"></span>
+      <span class="freeze-label">Frozen</span>
+      <span class="freeze-hint">press&nbsp;<kbd>F</kbd>&nbsp;to resume</span>
+    </div>
   </div>
 
   <!-- Speaker notes bar — visible in main window when presenter window is open -->

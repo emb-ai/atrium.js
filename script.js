@@ -19,7 +19,12 @@ function isFrozen() {
   if (frozen && (!presenterWin || presenterWin.closed)) {
     frozen = false;
   }
+  syncFreezeIndicator();
   return frozen;
+}
+
+function syncFreezeIndicator() {
+  document.body.classList.toggle('is-frozen', frozen);
 }
 
 function broadcastState() {
@@ -455,6 +460,7 @@ function toggleFreeze() {
     return;
   }
   frozen = !frozen;
+  syncFreezeIndicator();
   if (!frozen) {
     // On unfreeze, immediately sync presenter to current state.
     broadcastState();
@@ -522,6 +528,8 @@ function openPresenter() {
   if (presenterWin && !presenterWin.closed) {
     presenterWin.close();
     presenterWin = null;
+    frozen = false;
+    syncFreezeIndicator();
     hideNotes();
     return;
   }
@@ -536,6 +544,8 @@ function openPresenter() {
 setInterval(() => {
   if (!IS_PRESENTER && presenterWin && presenterWin.closed) {
     presenterWin = null;
+    frozen = false;
+    syncFreezeIndicator();
     hideNotes();
   }
 }, 500);
