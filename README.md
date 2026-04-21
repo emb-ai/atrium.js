@@ -14,8 +14,13 @@ sizes.
 
 A second "slideshow" window can be opened in the same browser; it mirrors the
 current slide, all saved strokes, the in-progress stroke, and any embedded
-video playback via `BroadcastChannel`. The speaker window keeps a speaker-notes
-sidebar that is hidden in the mirror.
+video playback. The speaker window keeps a speaker-notes sidebar that is
+hidden in the mirror, and can be "frozen" so the audience doesn't see
+in-progress edits.
+
+Every keyboard shortcut is also exposed as a button on an auto-hiding
+toolbar at the bottom of the speaker window, so features are discoverable
+without consulting a cheat sheet.
 
 ## Usage
 
@@ -48,7 +53,7 @@ with the slideshow window.
 | `L`            | Toggle laser pointer (short-living trace)    |
 | `S`            | Open / close the slideshow (mirror) window   |
 | `F`            | Freeze the slideshow mirror at current state |
-| `C`            | Toggle stroke color picker (in drawing mode) |
+| `C`            | Toggle stroke color / size picker (drawing)  |
 | `+` / `-`      | Increase / decrease stroke size              |
 | `Ctrl+Z`       | Undo last stroke on current slide            |
 | Left mouse     | Draw                                         |
@@ -71,11 +76,13 @@ underlying slide.
 
 ## Running locally
 
-The app is pure static HTML/CSS/JS — serve this directory with any local
-HTTP server that supports `Range` requests (needed for embedded videos to
-seek correctly). For example:
+The app is pure static HTML/CSS/JS — no build, no dependencies. Serve this
+directory with any local HTTP server that supports `Range` requests (needed
+for embedded videos to seek correctly). A tiny Python server is included:
 
 ```sh
+./serve.py
+# or
 npx http-server .
 # or
 caddy file-server --listen :8000
