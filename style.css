@@ -300,11 +300,18 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
 }
 
 /* ─── Color picker ──────────────────────────────────────────────────────────── */
+/* Positioning context for the picker, which sits above the color button. */
+#toolbar .tb-color-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 #color-picker {
   position: absolute;
   left: 50%;
-  top: 18px;
-  transform: translate(-50%, -8px);
+  bottom: calc(100% + 10px);
+  transform: translate(-50%, 8px);
   display: none;
   align-items: center;
   gap: 10px;
@@ -325,19 +332,18 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
   color: #0b1220;
   user-select: none;
   opacity: 0;
+  /* Parent toolbar sets pointer-events: none; re-enable for the picker so
+     swatches and the custom-color input stay clickable. */
+  pointer-events: auto;
   z-index: 11;
   transition: opacity 180ms ease-out, transform 180ms ease-out;
+  white-space: nowrap;
 }
 
 body.color-picker-open:not(.is-slideshow) #color-picker {
   display: inline-flex;
   opacity: 1;
   transform: translate(-50%, 0);
-}
-
-/* Nudge the freeze indicator down if both pills are visible at once. */
-body.color-picker-open.is-frozen:not(.is-slideshow) #freeze-indicator {
-  top: 58px;
 }
 
 #color-picker .cp-swatches {
