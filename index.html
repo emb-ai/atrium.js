@@ -40,6 +40,13 @@
       <span class="progress-total">1</span>
     </div>
 
+    <!-- Deck loading indicator — shown during initial SVG preload and while
+         the user-picked deck (SVGs or PDF) is being imported. -->
+    <div id="loading-indicator" aria-live="polite" aria-hidden="true">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span class="loading-label">Loading deck</span>
+    </div>
+
     <!-- Freeze-mode indicator (main window only; shown while frozen) -->
     <div id="freeze-indicator" aria-hidden="true">
       <span class="freeze-dot"></span>

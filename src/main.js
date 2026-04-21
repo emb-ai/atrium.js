@@ -25,6 +25,7 @@ import {
   toggleColorPicker,
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes } from './ui/notes.js';
+import { showLoading, updateLoading, hideLoading } from './ui/loading.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
 import { initVideoSync, applyVideoSync, broadcastAllVideoStates } from './sync/video.js';
 import {
@@ -126,6 +127,8 @@ function injectSvg(slide, svgText) {
 }
 
 async function preloadSlides() {
+  const fetchable = [...slides].filter(s => s.dataset.src);
+  if (fetchable.length) showLoading('Loading deck');
   const promises = [...slides].map(async (slide, index) => {
     const src = slide.dataset.src;
     if (!src) return;
@@ -139,6 +142,7 @@ async function preloadSlides() {
     }
   });
   await Promise.all(promises);
+  hideLoading();
 
   updateActiveSlideClass();
   setupCanvas();
@@ -163,16 +167,21 @@ function pickDeck() {
 
 async function loadDeckFromFiles(files) {
   const pdf = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
-  const sources = pdf
-    ? await sourcesFromPdf(pdf)
-    : await sourcesFromSvgs(files);
-  if (!sources?.length) return;
+  showLoading(pdf ? 'Rendering PDF' : 'Loading deck');
+  try {
+    const sources = pdf
+      ? await sourcesFromPdf(pdf)
+      : await sourcesFromSvgs(files);
+    if (!sources?.length) return;
 
-  // Broadcast before local rebuild: rebuilding locally triggers a state
-  // broadcast (via setSlidesData), and the slideshow needs the new deck in
-  // place before it applies that state.
-  broadcastDeck(sources);
-  rebuildSlidesFromSources(sources);
+    // Broadcast before local rebuild: rebuilding locally triggers a state
+    // broadcast (via setSlidesData), and the slideshow needs the new deck in
+    // place before it applies that state.
+    broadcastDeck(sources);
+    rebuildSlidesFromSources(sources);
+  } finally {
+    hideLoading();
+  }
 }
 
 async function sourcesFromSvgs(files) {
@@ -215,6 +224,7 @@ async function sourcesFromPdf(file) {
   const doc = await pdfjs.getDocument({ data }).promise;
   const sources = [];
   for (let i = 1; i <= doc.numPages; i++) {
+    updateLoading(`Rendering PDF ${i}/${doc.numPages}`);
     const page = await doc.getPage(i);
     const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
     const canvas = document.createElement('canvas');

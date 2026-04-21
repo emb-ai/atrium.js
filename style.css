@@ -274,6 +274,64 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   vertical-align: 1px;
 }
 
+/* ─── Deck loading indicator ────────────────────────────────────────────────── */
+#loading-indicator {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.6),
+    rgba(175, 182, 195, 0.5)
+  );
+  border: 1px solid rgba(11, 18, 32, 0.18);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 28px -8px rgba(143, 196, 255, 0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  font-family: monospace;
+  color: #0b1220;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  z-index: 20;
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+
+body.is-loading #loading-indicator {
+  display: inline-flex;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+#loading-indicator .loading-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(11, 18, 32, 0.22);
+  border-top-color: #0b1220;
+  animation: loading-spin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+
+#loading-indicator .loading-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Slide progress indicator (slideshow window only) ──────────────────────── */
 #progress-indicator {
   position: absolute;
@@ -631,4 +689,6 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
 @media (prefers-reduced-motion: reduce) {
   #freeze-indicator .freeze-dot { animation: none; }
   #freeze-indicator { transition: none; }
+  #loading-indicator .loading-spinner { animation: none; }
+  #loading-indicator { transition: none; }
 }
