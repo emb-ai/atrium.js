@@ -8,9 +8,9 @@
 import {
   ctx, tctx,
   getCanvasCssSize, applyPenStyles, clipToRect,
-} from './canvas.js';
-import { denormalizePoint } from './geometry.js';
-import { lineWidth, strokeColor } from './state.js';
+} from '../canvas.js';
+import { denormalizePoint } from '../geometry.js';
+import { lineWidth, strokeColor } from '../state.js';
 
 // Fallback for legacy stroke objects that lack a `color` field. Kept here
 // (not in state.js) because it's a rendering concern, not app state.

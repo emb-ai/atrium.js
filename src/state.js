@@ -2,7 +2,7 @@
 //
 // Cross-module state lives here and is mutated only through the exported
 // setters, each of which emits a named change event via the tiny bus below.
-// Subscribers — renderer, speaker-link broadcaster, toolbar, notes panel —
+// Subscribers — renderer, speaker broadcaster, toolbar, notes panel —
 // register once at boot and re-run themselves when state changes, so the
 // dozens of mutation sites don't each have to remember to call them.
 //

@@ -15,7 +15,7 @@ import {
   strokeColor,
   currentSlide,
   whiteboardMode, whiteboardCurrent, whiteboardSlides,
-} from './state.js';
+} from '../state.js';
 
 const HIDE_DELAY_MS = 1000;
 const REVEAL_ZONE_PX = 120;

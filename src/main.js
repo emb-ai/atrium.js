@@ -8,25 +8,25 @@ import {
 import {
   syncPenStyles,
   redrawAll as rendererRedrawAll,
-} from './renderer.js';
+} from './drawing/renderer.js';
 import {
   updateProgressIndicator,
   updateWhiteboardPagePosition,
-} from './progress.js';
+} from './ui/progress.js';
 import {
   initLaser,
   getLaserPoints,
   clearLaserPoints,
   startLaserLoop,
-} from './laser.js';
-import { showSizeDot } from './size-dot.js';
+} from './drawing/laser.js';
+import { showSizeDot } from './ui/size-dot.js';
 import {
   buildColorPicker,
   toggleColorPicker,
-} from './color-picker.js';
-import { initNotes, showNotes, hideNotes } from './notes.js';
-import { initToolbar, syncToolbar, showToolbar } from './toolbar.js';
-import { initVideoSync, applyVideoSync } from './video-sync.js';
+} from './ui/color-picker.js';
+import { initNotes, showNotes, hideNotes } from './ui/notes.js';
+import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
+import { initVideoSync, applyVideoSync } from './sync/video.js';
 import {
   IS_SLIDESHOW,
   initSpeakerLink,
@@ -38,15 +38,15 @@ import {
   toggleSpeakerMode,
   toggleFreeze,
   postToSlideshow,
-} from './speaker-link.js';
+} from './sync/speaker.js';
 import {
   initInput,
   isBusy,
   getCursorPos,
   getLiveStrokePoints,
   resetPointerState,
-} from './input.js';
-import { initKeybindings } from './keybindings.js';
+} from './drawing/input.js';
+import { initKeybindings } from './ui/keybindings.js';
 import {
   on,
   currentSlide, setCurrentSlide,

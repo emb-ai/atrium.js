@@ -16,8 +16,8 @@ import {
   whiteboardMode, setWhiteboardMode,
   whiteboardSlides, setWhiteboardSlides,
   whiteboardCurrent, setWhiteboardCurrent,
-} from './state.js';
-import { getLaserPoints, setLaserPoints, startLaserLoop } from './laser.js';
+} from '../state.js';
+import { getLaserPoints, setLaserPoints, startLaserLoop } from '../drawing/laser.js';
 
 const SLIDESHOW_CLOSED_POLL_MS = 500;
 
@@ -112,7 +112,7 @@ export function broadcastState() {
   });
 }
 
-// Forward an arbitrary message (used by video-sync for its own message
+// Forward an arbitrary message (used by video for its own message
 // type). Mirrors the guards that broadcastState applies plus the
 // isSlideshowOpen check — no point blasting video events when nothing's
 // listening and it was the original behavior we need to preserve.

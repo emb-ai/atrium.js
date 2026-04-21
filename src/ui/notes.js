@@ -6,7 +6,7 @@
 // panel's flex-basis reads. The canvas ResizeObserver in the main module
 // picks up the resulting reflow automatically.
 
-import { on, currentSlide, whiteboardMode } from './state.js';
+import { on, currentSlide, whiteboardMode } from '../state.js';
 
 const NOTES_MIN_WIDTH = 200;
 // Reserve enough horizontal room for the canvas/toolbar so dragging the

@@ -6,7 +6,7 @@
 // indicators stay in lockstep with the store. Open/close is driven by
 // `body.color-picker-open` so CSS owns the visibility transition.
 
-import { on, strokeColor, setStrokeColor, lineWidth, setLineWidth } from './state.js';
+import { on, strokeColor, setStrokeColor, lineWidth, setLineWidth } from '../state.js';
 
 const HIDE_DELAY_MS = 700;
 const COLOR_PALETTE = ['#168afe', '#dc2626', '#16a34a', '#f59e0b', '#a855f7', '#ffffff', '#000000'];

@@ -12,8 +12,8 @@
 // same internal `points` — the speaker/slideshow asymmetry lives in the
 // `shouldContinue` callback passed to initLaser().
 
-import { tctx, getCanvasCssSize } from './canvas.js';
-import { normalizePoint, denormalizePoint } from './geometry.js';
+import { tctx, getCanvasCssSize } from '../canvas.js';
+import { normalizePoint, denormalizePoint } from '../geometry.js';
 
 const LASER_STYLE = '#dc2626';
 const LASER_WIDTH = 10;

@@ -14,12 +14,12 @@ import {
   isDrawMode, isLaserMode, isPointerCaptureOn,
   strokeColor, lineWidth,
   getActiveStrokes, strokesChanged,
-} from './state.js';
-import { el, getPos } from './canvas.js';
-import { normalizePoint, denormalizePoint } from './geometry.js';
+} from '../state.js';
+import { el, getPos } from '../canvas.js';
+import { normalizePoint, denormalizePoint } from '../geometry.js';
 import { appendLiveSegment } from './renderer.js';
 import { pushLaserPoint } from './laser.js';
-import { closeColorPicker } from './color-picker.js';
+import { closeColorPicker } from '../ui/color-picker.js';
 
 const ERASE_THRESHOLD = 20;
 
@@ -51,7 +51,7 @@ export function getCursorPos() {
 }
 
 // Normalized live-stroke points (or null if not currently drawing). Used
-// by speaker-link to forward the in-progress stroke to the slideshow.
+// by speaker to forward the in-progress stroke to the slideshow.
 export function getLiveStrokePoints() {
   if (!isDrawing || currentPoints.length === 0) return null;
   return currentPoints.map(p => normalizePoint(p, cfg.getRefBox()));
