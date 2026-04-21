@@ -249,7 +249,7 @@ function rebuildSlidesFromSources(sources) {
   });
 
   slides = document.querySelectorAll('.slide');
-  if (currentSlide >= slides.length) setCurrentSlide(0);
+  setCurrentSlide(0);
   setSlidesData(Array.from(slides).map(() => [])); // emits 'strokes' → redraw + toolbar sync
   updateActiveSlideClass();
   setupCanvas();
