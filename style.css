@@ -2,7 +2,11 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #d0d0d0;
+  background:
+    radial-gradient(ellipse 120% 85% at 50% 0%,
+      #f6f8fc 0%,
+      #e7ecf4 55%,
+      #d6dde9 100%);
   font-family: monospace;
 }
 
@@ -129,18 +133,38 @@ canvas.drawing-disabled {
 /* ─── Notes sidebar ─────────────────────────────────────────────────────────── */
 #notes-panel {
   /* Hidden by default; JS adds .visible.
-     Width is fixed at 20% — content scrolls inside, never stretches the panel. */
+     Width is driven by --notes-width, set via the drag handle (#notes-resizer). */
   display: none;
-  flex: 0 0 20%;          /* fixed 20% — neither grow nor shrink */
-  width: 20%;             /* belt-and-suspenders for older engines */
+  flex: 0 0 var(--notes-width, 300px);
   min-width: 0;
   box-sizing: border-box;
-  background: #d0d0d0;
-  border-left: 1px solid #888;
-  padding: 10px 12px;
+  background:
+    linear-gradient(180deg, #eef2f8 0%, #dde4ef 100%);
+  padding: 16px 18px;
   overflow-y: auto;       /* scroll long notes; panel height stays 100% */
   overflow-x: hidden;
-  line-height: 1.55;
+  line-height: 1.6;
+  box-shadow: inset 1px 0 0 rgba(70, 90, 130, 0.28);
+}
+
+/* Drag handle between canvas-wrap and notes-panel. Visible only in speaker mode. */
+#notes-resizer {
+  display: none;
+  flex: 0 0 4px;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid rgba(70, 90, 130, 0.22);
+  user-select: none;
+  touch-action: none;     /* prevent scrolling on touch drag */
+}
+
+body:not(.is-slideshow).speaker-mode #notes-resizer {
+  display: block;
+}
+
+#notes-resizer:hover,
+#notes-resizer.dragging {
+  background: rgba(22, 138, 254, 0.25);
 }
 
 #notes-panel.visible {
@@ -161,7 +185,7 @@ canvas.drawing-disabled {
 #notes-content {
   font-size: 12.5px;
   font-family: monospace;
-  color: #1a1a1a;
+  color: #1a2236;
   white-space: pre-wrap;   /* preserve explicit line breaks */
   word-break: break-word;  /* wrap long words inside the fixed panel width */
 }

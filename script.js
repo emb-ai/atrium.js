@@ -1143,6 +1143,45 @@ function finalizeDrawing() {
 
 const notesPanel   = document.getElementById('notes-panel');
 const notesContent = document.getElementById('notes-content');
+const notesResizer = document.getElementById('notes-resizer');
+
+// Drag the vertical divider between canvas-wrap and notes-panel to resize notes.
+// Writes --notes-width on <body>, which #notes-panel's flex-basis reads. The
+// canvas ResizeObserver reflows drawings automatically as width changes.
+if (notesResizer && !IS_SLIDESHOW) {
+  const NOTES_MIN = 200;
+  const CANVAS_MIN = 320; // reserve enough room for the canvas/toolbar
+  let draggingId = null;
+  let startX = 0;
+  let startWidth = 0;
+
+  notesResizer.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    draggingId = e.pointerId;
+    startX = e.clientX;
+    startWidth = notesPanel.getBoundingClientRect().width;
+    notesResizer.setPointerCapture(e.pointerId);
+    notesResizer.classList.add('dragging');
+    e.preventDefault();
+  });
+
+  notesResizer.addEventListener('pointermove', (e) => {
+    if (draggingId !== e.pointerId) return;
+    const dx = e.clientX - startX;
+    const maxWidth = Math.max(NOTES_MIN, window.innerWidth - CANVAS_MIN);
+    const next = Math.max(NOTES_MIN, Math.min(maxWidth, startWidth - dx));
+    document.body.style.setProperty('--notes-width', next + 'px');
+  });
+
+  const endDrag = (e) => {
+    if (draggingId !== e.pointerId) return;
+    draggingId = null;
+    try { notesResizer.releasePointerCapture(e.pointerId); } catch (_) {}
+    notesResizer.classList.remove('dragging');
+  };
+  notesResizer.addEventListener('pointerup', endDrag);
+  notesResizer.addEventListener('pointercancel', endDrag);
+}
 
 function updateNotesContent() {
   if (IS_SLIDESHOW) return;
