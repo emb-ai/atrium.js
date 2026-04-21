@@ -152,9 +152,7 @@ function onPointerMove(e) {
   if (!isPointerCaptureOn()) return;
   const inside = isInsideRefBox(cursorPos);
   if (isLaserMode()) {
-    // Only feed the laser trail while inside — rendering is clipped anyway,
-    // but this also keeps us from broadcasting useless outside points.
-    if (!cfg.isFrozen() && inside) {
+    if (!cfg.isFrozen()) {
       pushLaserPoint(cursorPos, cfg.getRefBox());
       cfg.onLiveChange?.();
     }
