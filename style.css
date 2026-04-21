@@ -2,7 +2,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #111;
+  background: #d0d0d0;
   font-family: monospace;
 }
 
@@ -135,8 +135,8 @@ canvas.drawing-disabled {
   width: 20%;             /* belt-and-suspenders for older engines */
   min-width: 0;
   box-sizing: border-box;
-  background: #181818;
-  border-left: 1px solid #2e2e2e;
+  background: #d0d0d0;
+  border-left: 1px solid #888;
   padding: 10px 12px;
   overflow-y: auto;       /* scroll long notes; panel height stays 100% */
   overflow-x: hidden;
@@ -161,7 +161,7 @@ canvas.drawing-disabled {
 #notes-content {
   font-size: 12.5px;
   font-family: monospace;
-  color: #c8c8c8;
+  color: #1a1a1a;
   white-space: pre-wrap;   /* preserve explicit line breaks */
   word-break: break-word;  /* wrap long words inside the fixed panel width */
 }
