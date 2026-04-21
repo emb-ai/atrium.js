@@ -12,7 +12,7 @@
 // same internal `points` — the speaker/slideshow asymmetry lives in the
 // `shouldContinue` callback passed to initLaser().
 
-import { tctx, getCanvasCssSize, clipToRect } from './canvas.js';
+import { tctx, getCanvasCssSize } from './canvas.js';
 import { normalizePoint, denormalizePoint } from './geometry.js';
 
 const LASER_STYLE = '#dc2626';
@@ -93,7 +93,6 @@ function renderLaserFrame() {
 
   const refBox = config.getRefBox();
   tctx.save();
-  clipToRect(tctx, refBox);
   drawLaserTrail(tctx, points, refBox, LASER_WIDTH);
 
   // Head sits at the smoothed trail tip (not the raw cursor) so the dot
