@@ -1298,7 +1298,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       toggleFreeze();
     }
-    if (e.key === 'v' || e.key === 'V') {
+    if (e.key === 'p' || e.key === 'P') {
       e.preventDefault();
       toggleDrawing();
     }
