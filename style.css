@@ -423,6 +423,46 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
   -webkit-appearance: none;
 }
 
+#color-picker .cp-sizes {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#color-picker .cp-size {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: box-shadow 120ms ease-out;
+}
+
+#color-picker .cp-size .cp-size-dot {
+  display: block;
+  border-radius: 50%;
+  background: var(--dot, #0b1220);
+  box-shadow:
+    0 0 0 1px rgba(11, 18, 32, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  transition: transform 120ms ease-out;
+}
+
+#color-picker .cp-size:hover .cp-size-dot {
+  transform: scale(1.18);
+}
+
+#color-picker .cp-size.selected {
+  box-shadow:
+    0 0 0 2px #0b1220,
+    0 0 0 3px rgba(255, 255, 255, 0.75);
+}
+
 body.is-slideshow #color-picker {
   display: none !important;
 }

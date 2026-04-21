@@ -70,23 +70,19 @@
         <button type="button" class="tb-btn" data-action="color" title="Stroke color (C)" aria-label="Stroke color">
           <span class="tb-color-dot"></span>
         </button>
-        <!-- Color picker (main window only; toggled with C in drawing mode).
+        <!-- Color/size picker (main window only; toggled with C in drawing mode).
              Anchored above the color button via .tb-color-wrap. -->
-        <div id="color-picker" aria-hidden="true" role="toolbar" aria-label="Stroke color">
+        <div id="color-picker" aria-hidden="true" role="toolbar" aria-label="Stroke color and size">
           <div class="cp-swatches"></div>
           <span class="cp-sep"></span>
           <label class="cp-custom" title="Custom color">
             <span class="cp-custom-ring"></span>
             <input type="color" class="cp-input" aria-label="Custom color">
           </label>
+          <span class="cp-sep"></span>
+          <div class="cp-sizes" role="group" aria-label="Stroke size"></div>
         </div>
       </span>
-      <button type="button" class="tb-btn" data-action="size-down" title="Smaller stroke (-)" aria-label="Smaller stroke">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-      <button type="button" class="tb-btn" data-action="size-up" title="Larger stroke (+)" aria-label="Larger stroke">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
       <button type="button" class="tb-btn" data-action="undo" title="Undo last stroke (Ctrl+Z)" aria-label="Undo last stroke">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 7h7a3 3 0 0 1 0 6H7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 4L2 7l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>

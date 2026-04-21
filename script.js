@@ -9,7 +9,10 @@ let strokeColor = DEFAULT_STROKE_COLOR;
 const LINE_WIDTH_MIN = 1;
 const LINE_WIDTH_MAX = 40;
 const LINE_WIDTH_STEP = 2;
-let lineWidth = 5;
+// Size presets shown as three dots in the color picker. Each dot renders at
+// its actual stroke diameter so the button is a preview of the result.
+const LINE_WIDTH_PRESETS = [3, 5, 9];
+let lineWidth = LINE_WIDTH_PRESETS[1];
 
 // Laser pointer: short-living red trace that follows the cursor.
 // Width is fixed (independent of the drawing stroke size controlled by +/-).
@@ -322,6 +325,7 @@ function changeStrokeSize(delta) {
   applyStyles(ctx);
   applyStyles(tctx);
   if (cursorPos.x !== -999) showSizeDot();
+  syncColorPickerSelection();
 }
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
@@ -890,11 +894,6 @@ function syncToolbar() {
     const dot = colorBtn.querySelector('.tb-color-dot');
     if (dot) dot.style.background = strokeColor;
   }
-  for (const action of ['size-down', 'size-up']) {
-    const b = btn(action);
-    if (b) b.disabled = !drawingEnabled || laserMode;
-  }
-
   const freezeBtn = btn('freeze');
   if (freezeBtn) freezeBtn.disabled = !slideshowOpen;
 }
@@ -929,8 +928,6 @@ function wireToolbar() {
     laser:       () => toggleLaser(),
     cursor:      () => toggleCursorMode(),
     color:       () => { if (drawingEnabled && !laserMode) toggleColorPicker(); },
-    'size-down': () => { if (drawingEnabled && !laserMode) changeStrokeSize(-LINE_WIDTH_STEP); },
-    'size-up':   () => { if (drawingEnabled && !laserMode) changeStrokeSize(LINE_WIDTH_STEP); },
     undo:        () => {
       if (isFrozen()) return;
       if (!getStrokes().length) return;
@@ -981,6 +978,7 @@ const colorPicker     = document.getElementById('color-picker');
 const swatchContainer = colorPicker.querySelector('.cp-swatches');
 const colorInput      = colorPicker.querySelector('.cp-input');
 const customWrap      = colorPicker.querySelector('.cp-custom');
+const sizeContainer   = colorPicker.querySelector('.cp-sizes');
 
 function buildColorPicker() {
   COLOR_PALETTE.forEach(c => {
@@ -995,6 +993,21 @@ function buildColorPicker() {
   });
   colorInput.value = strokeColor;
   colorInput.addEventListener('input', e => selectColor(e.target.value));
+
+  LINE_WIDTH_PRESETS.forEach(w => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cp-size';
+    b.dataset.size = String(w);
+    b.setAttribute('aria-label', `Stroke size ${w}`);
+    const dot = document.createElement('span');
+    dot.className = 'cp-size-dot';
+    dot.style.width = w + 'px';
+    dot.style.height = w + 'px';
+    b.appendChild(dot);
+    b.addEventListener('click', () => selectSize(w));
+    sizeContainer.appendChild(b);
+  });
 
   // Hovering the toolbar pauses the auto-hide countdown; leaving it restarts
   // it (but only if a color was selected, i.e. auto-hide was armed).
@@ -1018,6 +1031,14 @@ function syncColorPickerSelection() {
   });
   customWrap.classList.toggle('selected', !isPreset);
   if (!isPreset) colorInput.value = strokeColor;
+
+  // Size dots inherit the current stroke color so each button previews
+  // exactly what that preset will draw.
+  sizeContainer.querySelectorAll('.cp-size').forEach(btn => {
+    btn.classList.toggle('selected', Number(btn.dataset.size) === lineWidth);
+    const dot = btn.querySelector('.cp-size-dot');
+    if (dot) dot.style.setProperty('--dot', strokeColor);
+  });
 }
 
 function selectColor(c) {
@@ -1026,6 +1047,14 @@ function selectColor(c) {
   applyStyles(tctx);
   syncColorPickerSelection();
   syncToolbar();
+  scheduleColorPickerHide();
+}
+
+function selectSize(w) {
+  lineWidth = w;
+  applyStyles(ctx);
+  applyStyles(tctx);
+  syncColorPickerSelection();
   scheduleColorPickerHide();
 }
 
