@@ -756,27 +756,35 @@ function toggleCursorMode() {
 }
 
 function toggleLaser() {
-  laserMode = !laserMode;
-  document.body.classList.toggle('laser-mode', laserMode);
-  if (laserMode && cursorMode) {
+  if (laserMode) {
+    // Disabling laser → fall back to cursor mode (the neutral resting state).
+    // Existing laser points stay put so the trail fades out naturally; the
+    // RAF loop stops itself once everything expires.
+    laserMode = false;
+    document.body.classList.remove('laser-mode');
+    cursorMode = true;
+    document.body.classList.add('cursor-mode');
+    setDrawingEnabled(false);
+    return;
+  }
+  laserMode = true;
+  document.body.classList.add('laser-mode');
+  if (cursorMode) {
     cursorMode = false;
     document.body.classList.remove('cursor-mode');
   }
-  if (laserMode) closeColorPicker();
+  closeColorPicker();
   // Laser needs the canvas to capture pointer events, so it can only run
   // while drawingEnabled is true (that flag controls pointer-events on the
   // canvas). If the user enabled laser while drawingEnabled was false
-  // (slide-interaction mode), force it back on.
-  if (laserMode && !drawingEnabled) {
+  // (cursor mode), force it back on.
+  if (!drawingEnabled) {
     setDrawingEnabled(true);
+  } else {
+    updateCursor();
+    syncToolbar();
   }
-  updateCursor();
-  if (laserMode) {
-    startLaserLoop();
-  }
-  // On toggle-off we keep the existing points so they fade out naturally;
-  // the RAF loop stops itself once everything expires.
-  syncToolbar();
+  startLaserLoop();
 }
 
 // ─── Erasing ──────────────────────────────────────────────────────────────────
@@ -838,7 +846,11 @@ function toggleDrawing() {
     setDrawingEnabled(true);
     return;
   }
-  setDrawingEnabled(!drawingEnabled);
+  // Already in drawing mode → disabling returns to cursor mode (the neutral
+  // resting state), not a fourth "everything off" state.
+  cursorMode = true;
+  document.body.classList.add('cursor-mode');
+  setDrawingEnabled(false);
 }
 
 function toggleFreeze() {
