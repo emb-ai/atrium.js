@@ -284,6 +284,7 @@ let drawingEnabled = true;
 let frozen = false;
 let mirroredLiveStroke = null; // slideshow-only: normalized live stroke from speaker window
 let laserMode = false;
+let cursorMode = false;
 let laserPoints = []; // [{x, y, t}] — normalized coords with Date.now() timestamps
 let mirroredLaserPoints = []; // slideshow-only: mirrored from speaker window
 let laserRafId = null;
@@ -733,9 +734,30 @@ function pushLaserPoint(pos) {
   broadcastState();
 }
 
+function toggleCursorMode() {
+  if (cursorMode) {
+    cursorMode = false;
+    document.body.classList.remove('cursor-mode');
+    setDrawingEnabled(true);
+    return;
+  }
+  if (laserMode) {
+    laserMode = false;
+    document.body.classList.remove('laser-mode');
+  }
+  cursorMode = true;
+  document.body.classList.add('cursor-mode');
+  closeColorPicker();
+  setDrawingEnabled(false);
+}
+
 function toggleLaser() {
   laserMode = !laserMode;
   document.body.classList.toggle('laser-mode', laserMode);
+  if (laserMode && cursorMode) {
+    cursorMode = false;
+    document.body.classList.remove('cursor-mode');
+  }
   if (laserMode) closeColorPicker();
   // Laser needs the canvas to capture pointer events, so it can only run
   // while drawingEnabled is true (that flag controls pointer-events on the
@@ -798,11 +820,17 @@ function setDrawingEnabled(on) {
 }
 
 function toggleDrawing() {
-  // Mutually exclusive with laser mode: clicking pencil while laser is on
-  // switches straight into drawing, it doesn't just clear laser.
+  // Mutually exclusive with laser / cursor modes: clicking pencil while
+  // either is on switches straight into drawing, it doesn't just clear them.
   if (laserMode) {
     laserMode = false;
     document.body.classList.remove('laser-mode');
+    setDrawingEnabled(true);
+    return;
+  }
+  if (cursorMode) {
+    cursorMode = false;
+    document.body.classList.remove('cursor-mode');
     setDrawingEnabled(true);
     return;
   }
@@ -849,8 +877,9 @@ function syncToolbar() {
   const nextBtn = btn('next');
   if (nextBtn) nextBtn.disabled = nextDisabled;
 
-  btn('draw')?.classList.toggle('active', drawingEnabled && !laserMode);
+  btn('draw')?.classList.toggle('active', drawingEnabled && !laserMode && !cursorMode);
   btn('laser')?.classList.toggle('active', laserMode);
+  btn('cursor')?.classList.toggle('active', cursorMode);
   btn('whiteboard')?.classList.toggle('active', whiteboardMode);
   btn('slideshow')?.classList.toggle('active', slideshowOpen);
   btn('freeze')?.classList.toggle('active', frozen);
@@ -898,6 +927,7 @@ function wireToolbar() {
     next:        () => navigate(1),
     draw:        () => toggleDrawing(),
     laser:       () => toggleLaser(),
+    cursor:      () => toggleCursorMode(),
     color:       () => { if (drawingEnabled && !laserMode) toggleColorPicker(); },
     'size-down': () => { if (drawingEnabled && !laserMode) changeStrokeSize(-LINE_WIDTH_STEP); },
     'size-up':   () => { if (drawingEnabled && !laserMode) changeStrokeSize(LINE_WIDTH_STEP); },
@@ -1226,6 +1256,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   buildColorPicker();
   wireToolbar();
   updateCursor();
+  toggleCursorMode();
 
   el.addEventListener('mousedown', e => {
     if (!drawingEnabled) return;
@@ -1305,6 +1336,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'l' || e.key === 'L') {
       e.preventDefault();
       toggleLaser();
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      toggleCursorMode();
     }
     if (e.key === 'c' || e.key === 'C') {
       e.preventDefault();

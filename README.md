@@ -42,6 +42,7 @@ with the slideshow window.
 | Key            | Action                                       |
 | -------------- | -------------------------------------------- |
 | `←` / `→`      | Previous / next slide                        |
+| `M`            | Toggle mouse (cursor) mode                   |
 | `P`            | Toggle pencil (drawing) mode                 |
 | `B`            | Toggle whiteboard mode (blank pages)         |
 | `L`            | Toggle laser pointer (short-living trace)    |
