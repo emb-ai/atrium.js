@@ -193,6 +193,13 @@ function rebuildSlidesFromSources(sources) {
   setSlidesData(Array.from(slides).map(() => [])); // emits 'strokes' → redraw + toolbar sync
   updateActiveSlideClass();
   setupCanvas();
+  // New deck = new <video> elements, which initVideoSync hasn't seen — re-run
+  // it so they get muted and (on speaker) wired for broadcast.
+  initVideoSync({
+    slides,
+    isSlideshow: IS_SLIDESHOW,
+    broadcast: postToSlideshow,
+  });
 }
 
 // ─── Size preview dot ─────────────────────────────────────────────────────────
