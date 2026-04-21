@@ -869,6 +869,14 @@ function toggleFreeze() {
   }
 }
 
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  } else {
+    document.documentElement.requestFullscreen();
+  }
+}
+
 // ─── Speaker toolbar ──────────────────────────────────────────────────────────
 // Every keyboard shortcut is mirrored as a toolbar button so features are
 // discoverable without memorizing the key map. Lives only in the main window.
@@ -899,6 +907,7 @@ function syncToolbar() {
   btn('whiteboard')?.classList.toggle('active', whiteboardMode);
   btn('slideshow')?.classList.toggle('active', slideshowOpen);
   btn('freeze')?.classList.toggle('active', frozen);
+  btn('fullscreen')?.classList.toggle('active', !!document.fullscreenElement);
 
   const colorBtn = btn('color');
   if (colorBtn) {
@@ -951,7 +960,10 @@ function wireToolbar() {
     whiteboard:  () => toggleWhiteboard(),
     slideshow:   () => toggleSpeakerMode(),
     freeze:      () => toggleFreeze(),
+    fullscreen:  () => toggleFullscreen(),
   };
+
+  document.addEventListener('fullscreenchange', syncToolbar);
 
   toolbarEl.addEventListener('click', e => {
     const btn = e.target.closest('.tb-btn');
