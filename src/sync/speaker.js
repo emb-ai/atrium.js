@@ -178,6 +178,7 @@ export function toggleFreeze() {
     // On unfreeze, immediately push current state so the slideshow catches
     // up on everything it missed while broadcasts were paused.
     broadcastState();
+    cfg?.broadcastVideoCatchup?.();
   }
 }
 
@@ -222,6 +223,7 @@ function onChannelMessage(event) {
       // before applying the stroke arrays sized to the new slide count.
       if (currentDeckSources) channel.postMessage({ type: 'deck', sources: currentDeckSources });
       broadcastState();
+      cfg?.broadcastVideoCatchup?.();
     }
   }
 }

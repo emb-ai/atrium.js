@@ -13,10 +13,14 @@ const SYNC_EVENTS = ['play', 'pause', 'seeked', 'ratechange', 'volumechange', 'e
 const DRIFT_THRESHOLD_S = 0.3;
 
 let slides = null;
+let isSlideshow = false;
+let broadcast = null;
 let suppressBroadcast = false;
 
 export function initVideoSync(cfg) {
   slides = cfg.slides;
+  isSlideshow = cfg.isSlideshow;
+  broadcast = cfg.broadcast;
 
   for (const { slideIdx, videoIdx, el: v } of getAllVideos()) {
     // Both windows start muted — the lecturer's physical voice carries,
@@ -24,7 +28,7 @@ export function initVideoSync(cfg) {
     // through the room mic.
     v.muted = true;
 
-    if (cfg.isSlideshow) {
+    if (isSlideshow) {
       // Slideshow videos are strict mirrors — controls stripped so the
       // audience can't desync, and pointer events blocked so clicks/
       // scrubs can't interact.
@@ -36,19 +40,33 @@ export function initVideoSync(cfg) {
       for (const type of SYNC_EVENTS) {
         v.addEventListener(type, () => {
           if (suppressBroadcast) return;
-          cfg.broadcast({
-            type: 'video-sync',
-            slideIdx, videoIdx,
-            paused: v.paused,
-            currentTime: v.currentTime,
-            playbackRate: v.playbackRate,
-            muted: v.muted,
-            volume: v.volume,
-          });
+          postVideoState(slideIdx, videoIdx, v);
         });
       }
     }
   }
+}
+
+// Push the current state of every video to the slideshow. Used when a
+// slideshow boots (request-state) or the speaker unfreezes — otherwise a
+// video already playing when the slideshow opens would stay paused at 0.
+export function broadcastAllVideoStates() {
+  if (isSlideshow || !slides || !broadcast) return;
+  for (const { slideIdx, videoIdx, el: v } of getAllVideos()) {
+    postVideoState(slideIdx, videoIdx, v);
+  }
+}
+
+function postVideoState(slideIdx, videoIdx, v) {
+  broadcast({
+    type: 'video-sync',
+    slideIdx, videoIdx,
+    paused: v.paused,
+    currentTime: v.currentTime,
+    playbackRate: v.playbackRate,
+    muted: v.muted,
+    volume: v.volume,
+  });
 }
 
 export function applyVideoSync(msg) {

@@ -26,7 +26,7 @@ import {
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes } from './ui/notes.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
-import { initVideoSync, applyVideoSync } from './sync/video.js';
+import { initVideoSync, applyVideoSync, broadcastAllVideoStates } from './sync/video.js';
 import {
   IS_SLIDESHOW,
   initSpeakerLink,
@@ -339,6 +339,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     onFreezeChanged: syncToolbar,
     onVideoSync: applyVideoSync,
     onDeckReceived: rebuildSlidesFromSources,
+    broadcastVideoCatchup: broadcastAllVideoStates,
   });
   initInput({
     isSlideshow: IS_SLIDESHOW,
