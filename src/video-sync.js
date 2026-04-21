@@ -19,11 +19,15 @@ export function initVideoSync(cfg) {
   slides = cfg.slides;
 
   for (const { slideIdx, videoIdx, el: v } of getAllVideos()) {
+    // Both windows start muted — the lecturer's physical voice carries,
+    // and playing video audio from the speaker laptop would feed back
+    // through the room mic.
+    v.muted = true;
+
     if (cfg.isSlideshow) {
-      // Slideshow videos are strict mirrors — muted (lecturer's physical
-      // voice carries), controls stripped so the audience can't desync,
-      // and pointer events blocked so clicks/scrubs can't interact.
-      v.muted = true;
+      // Slideshow videos are strict mirrors — controls stripped so the
+      // audience can't desync, and pointer events blocked so clicks/
+      // scrubs can't interact.
       v.controls = false;
       v.removeAttribute('controls');
       v.disablePictureInPicture = true;
