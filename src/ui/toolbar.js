@@ -85,7 +85,7 @@ export function syncToolbar() {
       && whiteboardSlides[whiteboardCurrent].length === 0;
   } else {
     prevDisabled = currentSlide === 0;
-    nextDisabled = currentSlide >= cfg.slideCount - 1;
+    nextDisabled = currentSlide >= cfg.getSlideCount() - 1;
   }
   const prevBtn = btn('prev');
   if (prevBtn) prevBtn.disabled = prevDisabled;

@@ -28,6 +28,12 @@ let slideshowWin = null;
 let frozen = false;
 let slidesReady = false;
 let pendingState = null;
+let pendingDeck = null;
+// Speaker-side cache of a user-loaded deck (from the folder picker). null
+// means the deck is whatever's in the HTML; both windows load the same
+// data-src URLs in that case, so no explicit sync is needed. Once set,
+// it's replayed to any slideshow window that asks for state.
+let currentDeckSources = null;
 // Slideshow-only cache of the speaker's in-progress stroke. Exposed via
 // getMirroredLiveStroke() so the renderer can paint it alongside committed
 // strokes without a separate redraw path.
@@ -83,6 +89,12 @@ export function getMirroredLiveStroke() {
 
 export function markSlidesReady() {
   slidesReady = true;
+  // Deck must apply before state so setSlidesData in applySlideshowState
+  // lines up with the new slide count.
+  if (pendingDeck) {
+    cfg?.onDeckReceived?.(pendingDeck.sources);
+    pendingDeck = null;
+  }
   if (pendingState) {
     applySlideshowState(pendingState);
     pendingState = null;
@@ -121,6 +133,16 @@ export function postToSlideshow(msg) {
   if (isFrozen()) return;
   if (!isSlideshowOpen()) return;
   channel.postMessage(msg);
+}
+
+// Store and broadcast a user-loaded deck so the slideshow window rebuilds
+// its #slides container from the same SVG text. Kept separate from
+// broadcastState because state fires on every stroke/laser/mode change
+// and the deck payload would be pointless overhead there.
+export function broadcastDeck(sources) {
+  if (IS_SLIDESHOW) return;
+  currentDeckSources = sources;
+  channel.postMessage({ type: 'deck', sources });
 }
 
 export function toggleSpeakerMode() {
@@ -176,7 +198,13 @@ function onChannelMessage(event) {
   if (!msg) return;
 
   if (IS_SLIDESHOW) {
-    if (msg.type === 'state') {
+    if (msg.type === 'deck') {
+      if (!slidesReady) {
+        pendingDeck = msg;
+        return;
+      }
+      cfg?.onDeckReceived?.(msg.sources);
+    } else if (msg.type === 'state') {
       // If slides are still loading, queue the message so the final
       // markSlidesReady() can apply it without racing preloadSlides.
       if (!slidesReady) {
@@ -189,7 +217,12 @@ function onChannelMessage(event) {
       cfg?.onVideoSync?.(msg);
     }
   } else {
-    if (msg.type === 'request-state') broadcastState();
+    if (msg.type === 'request-state') {
+      // Deck before state so the slideshow rebuilds its #slides container
+      // before applying the stroke arrays sized to the new slide count.
+      if (currentDeckSources) channel.postMessage({ type: 'deck', sources: currentDeckSources });
+      broadcastState();
+    }
   }
 }
 

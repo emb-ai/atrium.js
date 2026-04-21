@@ -38,6 +38,7 @@ import {
   toggleSpeakerMode,
   toggleFreeze,
   postToSlideshow,
+  broadcastDeck,
 } from './sync/speaker.js';
 import {
   initInput,
@@ -80,7 +81,9 @@ initLaser({
 });
 
 // ─── Slides ───────────────────────────────────────────────────────────────────
-const slides = document.querySelectorAll('.slide');
+// `slides` is reassigned when the user loads a different deck from a folder
+// (see loadDeckFromFiles below), so it can't be const.
+let slides = document.querySelectorAll('.slide');
 setSlidesData(Array.from(slides).map(() => [])); // one empty stroke list per slide
 
 // Whiteboard mode: a separate stack of blank pages with their own strokes.
@@ -116,6 +119,12 @@ function navigate(delta) {
 }
 
 // ─── Preload SVGs into slide divs ─────────────────────────────────────────────
+function injectSvg(slide, svgText) {
+  const svgDoc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+  slide.innerHTML = '';
+  slide.appendChild(svgDoc.documentElement);
+}
+
 async function preloadSlides() {
   const promises = [...slides].map(async (slide, index) => {
     const src = slide.dataset.src;
@@ -123,10 +132,7 @@ async function preloadSlides() {
     try {
       const response = await fetch(src);
       const svgText = await response.text();
-      const parser = new DOMParser();
-      const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
-      slide.innerHTML = '';
-      slide.appendChild(svgDoc.documentElement);
+      injectSvg(slide, svgText);
     } catch (err) {
       console.error(`Failed to load slide ${index + 1}:`, err);
       slide.textContent = `⚠️ Failed to load ${src}`;
@@ -134,6 +140,57 @@ async function preloadSlides() {
   });
   await Promise.all(promises);
 
+  updateActiveSlideClass();
+  setupCanvas();
+}
+
+// ─── Load deck from a folder picked by the user ───────────────────────────────
+// Prototype: lets the app run serverless (file://) by having the user pick a
+// folder of SVG slides. Files are sorted numerically by name ("1.svg" before
+// "10.svg") so ordinal filenames map to slide order.
+function pickSlidesFolder() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.webkitdirectory = true;
+  input.multiple = true;
+  input.addEventListener('change', () => {
+    const files = Array.from(input.files || []);
+    if (files.length) loadDeckFromFiles(files);
+  });
+  input.click();
+}
+
+async function loadDeckFromFiles(files) {
+  const svgs = files
+    .filter(f => f.name.toLowerCase().endsWith('.svg'))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (!svgs.length) return;
+
+  const texts = await Promise.all(svgs.map(f => f.text()));
+  const sources = svgs.map((file, i) => ({ name: file.name, svgText: texts[i] }));
+  // Broadcast before local rebuild: rebuilding locally triggers a state
+  // broadcast (via setSlidesData), and the slideshow needs the new deck in
+  // place before it applies that state.
+  broadcastDeck(sources);
+  rebuildSlidesFromSources(sources);
+}
+
+// Also used on the slideshow side when a 'deck' message arrives, so the
+// mirror can rebuild its #slides container to match the speaker's.
+function rebuildSlidesFromSources(sources) {
+  const container = document.getElementById('slides');
+  container.innerHTML = '';
+  sources.forEach(src => {
+    const div = document.createElement('div');
+    div.className = 'slide';
+    div.dataset.src = src.name;
+    injectSvg(div, src.svgText);
+    container.appendChild(div);
+  });
+
+  slides = document.querySelectorAll('.slide');
+  if (currentSlide >= slides.length) setCurrentSlide(0);
+  setSlidesData(Array.from(slides).map(() => [])); // emits 'strokes' → redraw + toolbar sync
   updateActiveSlideClass();
   setupCanvas();
 }
@@ -274,6 +331,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     onSlideshowClosed: () => { hideNotes(); syncToolbar(); },
     onFreezeChanged: syncToolbar,
     onVideoSync: applyVideoSync,
+    onDeckReceived: rebuildSlidesFromSources,
   });
   initInput({
     isSlideshow: IS_SLIDESHOW,
@@ -332,12 +390,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     slideshow:  toggleSpeakerMode,
     freeze:     toggleFreeze,
     fullscreen: toggleFullscreen,
+    loadDeck:   pickSlidesFolder,
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(LINE_WIDTH_STEP); },
     sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-LINE_WIDTH_STEP); },
   };
 
   initToolbar({
-    slideCount: slides.length,
+    getSlideCount: () => slides.length,
     isSlideshowOpen,
     isFrozen,
     isBusy,
