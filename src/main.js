@@ -25,7 +25,7 @@ import {
   toggleColorPicker,
 } from './color-picker.js';
 import { initNotes, showNotes, hideNotes } from './notes.js';
-import { initToolbar, syncToolbar } from './toolbar.js';
+import { initToolbar, syncToolbar, showToolbar } from './toolbar.js';
 import { initVideoSync, applyVideoSync } from './video-sync.js';
 import {
   IS_SLIDESHOW,
@@ -317,7 +317,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     draw:       toggleDrawing,
     laser:      toggleLaser,
     cursor:     toggleCursorMode,
-    color:      () => { if (isDrawMode()) toggleColorPicker(); },
+    color:      () => {
+      if (!isDrawMode()) return;
+      toggleColorPicker();
+      showToolbar();
+    },
     undo:       () => {
       if (isFrozen()) return;
       if (!getStrokes().length) return;
