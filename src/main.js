@@ -144,14 +144,15 @@ async function preloadSlides() {
   setupCanvas();
 }
 
-// ─── Load deck from a folder picked by the user ───────────────────────────────
-// Prototype: lets the app run serverless (file://) by having the user pick a
-// folder of SVG slides. Files are sorted numerically by name ("1.svg" before
-// "10.svg") so ordinal filenames map to slide order.
-function pickSlidesFolder() {
+// ─── Load deck from files picked by the user ─────────────────────────────────
+// Two accepted inputs from one button: either a multi-selection of SVG files
+// (ordinal filenames map to slide order) or a single PDF. PDF pages are
+// rasterized and wrapped in minimal SVGs so the existing slide pipeline
+// (viewBox-based normalization, broadcasting) works unchanged.
+function pickDeck() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.webkitdirectory = true;
+  input.accept = '.svg,.pdf,image/svg+xml,application/pdf';
   input.multiple = true;
   input.addEventListener('change', () => {
     const files = Array.from(input.files || []);
@@ -161,18 +162,77 @@ function pickSlidesFolder() {
 }
 
 async function loadDeckFromFiles(files) {
-  const svgs = files
-    .filter(f => f.name.toLowerCase().endsWith('.svg'))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-  if (!svgs.length) return;
+  const pdf = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  const sources = pdf
+    ? await sourcesFromPdf(pdf)
+    : await sourcesFromSvgs(files);
+  if (!sources?.length) return;
 
-  const texts = await Promise.all(svgs.map(f => f.text()));
-  const sources = svgs.map((file, i) => ({ name: file.name, svgText: texts[i] }));
   // Broadcast before local rebuild: rebuilding locally triggers a state
   // broadcast (via setSlidesData), and the slideshow needs the new deck in
   // place before it applies that state.
   broadcastDeck(sources);
   rebuildSlidesFromSources(sources);
+}
+
+async function sourcesFromSvgs(files) {
+  const svgs = files
+    .filter(f => f.name.toLowerCase().endsWith('.svg'))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (!svgs.length) return [];
+  const texts = await Promise.all(svgs.map(f => f.text()));
+  return svgs.map((file, i) => ({ name: file.name, svgText: texts[i] }));
+}
+
+// pdf.js is loaded on demand from vendor/ so the app stays dependency-free for
+// the common SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE
+// (relative to PDF's native 72dpi) then embedded as a PNG inside a tiny SVG
+// wrapper whose viewBox matches the page's PDF units — that's what
+// getReferenceBox() keys off for stroke normalization. Higher scale = crisper
+// on large displays at the cost of upfront render time and broadcast payload.
+const PDFJS_BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
+const PDF_RENDER_SCALE = 6;
+let pdfjsPromise = null;
+function loadPdfJs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import(/* @vite-ignore */ `${PDFJS_BASE}pdf.mjs`).then(mod => {
+      mod.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.mjs`;
+      return mod;
+    });
+  }
+  return pdfjsPromise;
+}
+
+async function sourcesFromPdf(file) {
+  let pdfjs;
+  try {
+    pdfjs = await loadPdfJs();
+  } catch (err) {
+    console.error('Failed to load pdf.js', err);
+    return [];
+  }
+  const data = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({ data }).promise;
+  const sources = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const png = canvas.toDataURL('image/png');
+    const w = page.view[2] - page.view[0];
+    const h = page.view[3] - page.view[1];
+    const svgText =
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+      `viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">` +
+      `<image href="${png}" xlink:href="${png}" width="${w}" height="${h}"/>` +
+      `</svg>`;
+    sources.push({ name: `${file.name}#${i}`, svgText });
+  }
+  return sources;
 }
 
 // Also used on the slideshow side when a 'deck' message arrives, so the
@@ -398,7 +458,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     slideshow:  toggleSpeakerMode,
     freeze:     toggleFreeze,
     fullscreen: toggleFullscreen,
-    loadDeck:   pickSlidesFolder,
+    loadDeck:   pickDeck,
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(LINE_WIDTH_STEP); },
     sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-LINE_WIDTH_STEP); },
   };
