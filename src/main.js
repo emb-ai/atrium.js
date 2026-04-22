@@ -287,12 +287,31 @@ function getActiveSvg() {
   return slides[currentSlide]?.querySelector('svg') || null;
 }
 
+// Aspect ratio used for the whiteboard when there's no slide to borrow a
+// viewBox from (empty deck). Both windows compute the same letterbox from
+// this, so strokes drawn on the whiteboard in speaker mode mirror correctly
+// to a differently-sized slideshow window.
+const DEFAULT_WHITEBOARD_ASPECT = 16 / 9;
+
 // In whiteboard mode the underlying slide is hidden but we still use its SVG
 // viewBox as the drawing area so the whiteboard "page" occupies exactly the
 // same letterboxed region a slide would — and so strokes mirror to the
 // slideshow window with the same aspect ratio regardless of window size.
+// With no active slide we fall back to a fixed aspect so the whiteboard
+// page keeps its proportions across resizes and between the speaker /
+// slideshow windows.
 function getReferenceBox() {
-  return computeReferenceBox(getActiveSvg(), getCanvasCssSize());
+  const svg = getActiveSvg();
+  const canvasSize = getCanvasCssSize();
+  if (svg) return computeReferenceBox(svg, canvasSize);
+  return letterbox(DEFAULT_WHITEBOARD_ASPECT, canvasSize);
+}
+
+function letterbox(aspect, { width, height }) {
+  const scale = Math.min(width / aspect, height);
+  const w = aspect * scale;
+  const h = scale;
+  return { x: (width - w) / 2, y: (height - h) / 2, width: w, height: h };
 }
 
 // Resize both canvases and redraw. Wraps the pure resize from canvas.js
@@ -310,14 +329,15 @@ function redrawAll() {
   const refBox = getReferenceBox();
   rendererRedrawAll({
     refBox,
-    strokes: getStrokes(),
+    strokes: getStrokes() ?? [],
     liveStroke: getMirroredLiveStroke(),
   });
   if (!IS_SLIDESHOW) {
+    const total = whiteboardMode ? whiteboardSlides.length : slides.length;
     updateProgressIndicator({
       refBox,
       current: whiteboardMode ? whiteboardCurrent + 1 : currentSlide + 1,
-      total:   whiteboardMode ? whiteboardSlides.length : slides.length,
+      total,
     });
   }
   if (whiteboardMode) updateWhiteboardPagePosition(refBox);
@@ -460,8 +480,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
     undo:       () => {
       if (isFrozen()) return;
-      if (!getStrokes().length) return;
-      getStrokes().pop();
+      const strokes = getStrokes();
+      if (!strokes?.length) return;
+      strokes.pop();
       strokesChanged();
     },
     whiteboard: toggleWhiteboard,

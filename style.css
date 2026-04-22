@@ -363,6 +363,10 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
   display: inline-flex;
 }
 
+#progress-indicator.is-empty {
+  display: none;
+}
+
 #progress-indicator .progress-current {
   font-size: 11px;
   font-weight: 400;

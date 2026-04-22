@@ -8,22 +8,12 @@
 <body class="drawing-enabled">
   <div class="canvas-wrap">
 
-    <!-- Slides (empty divs to be filled by preloaded SVGs)
-         Each referenced SVG may contain a <desc id="slide-notes"> element
-         with speaker notes for that slide, e.g.:
-
-           <desc id="slide-notes">Mention the Q3 results here.
-           Talk about the new product roadmap.</desc>
-
-         Notes are shown in the notes bar below (speaker window only)
-         whenever the slideshow window is open.
-    -->
-    <div id="slides">
-      <div class="slide" data-src="slides/1.svg" data-notes="Introduce the topic.&#10;Mention key goals."></div>
-      <div class="slide" data-src="slides/slide1.svg"></div>
-      <div class="slide" data-src="slides/2.svg"></div>
-      <div class="slide" data-src="slides/3.svg"></div>
-    </div>
+    <!-- Slides container. Populated either statically (add .slide children
+         with data-src="slides/N.svg" and optional data-notes="...") or at
+         runtime via the toolbar "Load deck" button (SVGs or PDF). An empty
+         container is fine — the app starts in a no-slides state and the
+         user loads a deck when ready. Whiteboard mode (B) works regardless. -->
+    <div id="slides"></div>
 
     <!-- Whiteboard page: a blank "slide" shown only in whiteboard mode.
          Positioned from JS to match getReferenceBox() so it lines up exactly

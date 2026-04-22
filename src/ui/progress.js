@@ -17,6 +17,9 @@ const whiteboardPageEl = document.getElementById('whiteboard-page');
 const PROGRESS_INSET = 18;
 
 export function updateProgressIndicator({ refBox, current, total }) {
+  // Nothing to count if the deck is empty — hide so "1/0" doesn't show in
+  // the corner before the user loads slides.
+  progressIndicator.classList.toggle('is-empty', total <= 0);
   progressCurrent.textContent = String(current);
   progressTotal.textContent = String(total);
   progressIndicator.style.left = (refBox.x + refBox.width - PROGRESS_INSET) + 'px';

@@ -70,10 +70,11 @@ export function resetPointerState() {
 // Safe to call when not drawing — it's a no-op in that case.
 export function finalizeDrawing() {
   if (!isDrawing) return;
-  if (currentPoints.length > 1) {
+  const target = getActiveStrokes();
+  if (target && currentPoints.length > 1) {
     const refBox = cfg.getRefBox();
     const normalized = currentPoints.map(p => normalizePoint(p, refBox));
-    getActiveStrokes().push({ points: normalized, width: lineWidth, color: strokeColor });
+    target.push({ points: normalized, width: lineWidth, color: strokeColor });
   }
   isDrawing = false;
   currentPoints = [];
@@ -103,7 +104,7 @@ function isInsideRefBox(pos) {
 
 function tryDeleteClosest(pos) {
   const strokes = getActiveStrokes();
-  if (!strokes.length) return;
+  if (!strokes?.length) return;
 
   const refBox = cfg.getRefBox();
   let closestIdx = -1;
@@ -131,6 +132,9 @@ function onMouseDown(e) {
   // laser ignores clicks and follows the pointer directly.
   if (!isDrawMode()) return;
   if (cfg.isFrozen()) return;
+  // No active slide / whiteboard page to draw on — ignore the click so we
+  // don't lose strokes into a non-existent target array.
+  if (!getActiveStrokes()) return;
   const pos = getPos(e);
   // The canvas covers the whole wrap (including the letterbox around the
   // slide/whiteboard); reject input that starts outside the SVG viewBox
