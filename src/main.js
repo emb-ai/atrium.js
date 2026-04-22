@@ -25,6 +25,7 @@ import {
   toggleColorPicker,
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes } from './ui/notes.js';
+import { initHelp, toggleHelp, closeHelp } from './ui/help.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
 import {
   initSlides,
@@ -292,6 +293,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ─── Main window bootstrap ──────────────────────────────────────────────────
   buildColorPicker();
   initNotes({ onVisibilityChange: setupCanvas });
+  initHelp();
 
   // Single action table shared by the toolbar and keybindings. Keys not
   // recognized by a given consumer (toolbar has no sizeUp, keybindings has
@@ -325,6 +327,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     loadDeck:   pickDeck,
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(+1); },
     sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-1); },
+    help:       toggleHelp,
+    closeHelp:  closeHelp,
   };
 
   initToolbar({

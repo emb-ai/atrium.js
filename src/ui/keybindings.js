@@ -11,6 +11,10 @@ export function initKeybindings(actions) {
       return;
     }
 
+    // Cheatsheet toggle — `?` opens, Escape closes (only when open).
+    if (e.key === '?') { e.preventDefault(); actions.help(); return; }
+    if (e.key === 'Escape') { actions.closeHelp(); return; }
+
     switch (e.key.toLowerCase()) {
       case 'f': e.preventDefault(); actions.freeze();     break;
       case 'd': e.preventDefault(); actions.draw();       break;

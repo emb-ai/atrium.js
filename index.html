@@ -46,6 +46,53 @@
       <span class="loading-label">Loading deck</span>
     </div>
 
+    <!-- Keybinding cheatsheet (speaker window only; toggled with ?) -->
+    <div id="help-overlay" aria-hidden="true" role="dialog" aria-label="Keyboard shortcuts">
+      <div id="help-panel">
+        <div class="help-header">
+          <span class="help-title">Keyboard shortcuts</span>
+          <span class="help-hint">press&nbsp;<kbd>?</kbd>&nbsp;or&nbsp;<kbd>Esc</kbd>&nbsp;to close</span>
+        </div>
+        <div class="help-grid">
+          <section>
+            <h3>Navigation</h3>
+            <dl>
+              <dt><kbd>←</kbd> <kbd>PgUp</kbd></dt><dd>Previous slide</dd>
+              <dt><kbd>→</kbd> <kbd>PgDn</kbd></dt><dd>Next slide</dd>
+              <dt><kbd>Home</kbd></dt><dd>First slide</dd>
+              <dt><kbd>End</kbd></dt><dd>Last slide</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Modes</h3>
+            <dl>
+              <dt><kbd>D</kbd></dt><dd>Draw</dd>
+              <dt><kbd>L</kbd></dt><dd>Laser pointer</dd>
+              <dt><kbd>C</kbd></dt><dd>Cursor</dd>
+              <dt><kbd>B</kbd></dt><dd>Whiteboard</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Drawing</h3>
+            <dl>
+              <dt><kbd>P</kbd></dt><dd>Color &amp; size picker</dd>
+              <dt><kbd>+</kbd> <kbd>-</kbd></dt><dd>Stroke size</dd>
+              <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Undo last stroke</dd>
+              <dt>Right-click</dt><dd>Erase nearest stroke</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Presentation</h3>
+            <dl>
+              <dt><kbd>S</kbd></dt><dd>Toggle speaker window</dd>
+              <dt><kbd>F</kbd></dt><dd>Freeze slideshow</dd>
+              <dt><kbd>?</kbd></dt><dd>This cheatsheet</dd>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </div>
+
     <!-- Freeze-mode indicator (main window only; shown while frozen) -->
     <div id="freeze-indicator" aria-hidden="true">
       <span class="freeze-dot"></span>
@@ -100,7 +147,7 @@
       <button type="button" class="tb-btn" data-action="whiteboard" title="Whiteboard (B)" aria-label="Toggle whiteboard">
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.25" y="2.5" width="11.5" height="11" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
       </button>
-      <button type="button" class="tb-btn" data-action="slideshow" title="Toggle slideshow window (S)" aria-label="Toggle slideshow window">
+      <button type="button" class="tb-btn" data-action="slideshow" title="Toggle speaker window (S)" aria-label="Toggle speaker window">
         <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 14h5M8 11.5V14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       </button>
       <button type="button" class="tb-btn" data-action="freeze" title="Freeze slideshow (F)" aria-label="Toggle freeze">
