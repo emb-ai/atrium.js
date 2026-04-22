@@ -21,6 +21,14 @@ const HIDE_DELAY_MS = 1000;
 const REVEAL_ZONE_PX = 120;
 
 const toolbarEl = document.getElementById('toolbar');
+// `fullscreenchange` only fires for the JS Fullscreen API; F11 is a
+// browser-level fullscreen that doesn't set document.fullscreenElement.
+// The display-mode media query reflects both, so we OR them together.
+const fullscreenMql = window.matchMedia('(display-mode: fullscreen)');
+
+function isFullscreen() {
+  return !!document.fullscreenElement || fullscreenMql.matches;
+}
 
 let hideTimer = null;
 let hovered = false;
@@ -33,6 +41,7 @@ export function initToolbar(config) {
   cfg = config;
 
   document.addEventListener('fullscreenchange', syncToolbar);
+  fullscreenMql.addEventListener('change', syncToolbar);
 
   toolbarEl.addEventListener('click', e => {
     const btn = e.target.closest('.tb-btn');
@@ -98,7 +107,15 @@ export function syncToolbar() {
   btn('whiteboard')?.classList.toggle('active', whiteboardMode);
   btn('slideshow')?.classList.toggle('active', slideshowOpen);
   btn('freeze')?.classList.toggle('active', frozen);
-  btn('fullscreen')?.classList.toggle('active', !!document.fullscreenElement);
+  const fsBtn = btn('fullscreen');
+  if (fsBtn) {
+    fsBtn.classList.toggle('active', isFullscreen());
+    // F11 fullscreen can't be exited programmatically; only the user can
+    // press F11 again. Disable the button and hint in the tooltip.
+    const f11Only = fullscreenMql.matches && !document.fullscreenElement;
+    fsBtn.disabled = f11Only;
+    fsBtn.title = f11Only ? 'Press F11 to exit fullscreen' : 'Toggle fullscreen';
+  }
 
   const colorBtn = btn('color');
   if (colorBtn) {
