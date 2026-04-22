@@ -1,3 +1,24 @@
+/* ─── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --text: #0b1220;
+  --accent: #168afe;
+  --glow: #8fc4ff;
+  --border-dark: rgba(11, 18, 32, 0.18);
+  --border-dark-strong: rgba(11, 18, 32, 0.22);
+  --pill-bg: linear-gradient(180deg, rgba(210, 215, 225, 0.55), rgba(175, 182, 195, 0.45));
+  --pill-bg-strong: linear-gradient(180deg, rgba(210, 215, 225, 0.6), rgba(175, 182, 195, 0.5));
+  --pill-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 28px -8px rgba(143, 196, 255, 0.35);
+  --swatch-ring:
+    0 0 0 1px rgba(11, 18, 32, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  --selected-ring:
+    0 0 0 2px var(--text),
+    0 0 0 3px rgba(255, 255, 255, 0.75);
+  --focus-ring: rgba(22, 138, 254, 0.7);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -107,7 +128,7 @@ canvas.drawing-disabled {
 #size-dot {
   position: absolute;
   border-radius: 50%;
-  background: #168afe;
+  background: var(--accent);
   pointer-events: none;
   opacity: 0;
 }
@@ -119,6 +140,33 @@ canvas.drawing-disabled {
 #size-dot.fade {
   opacity: 0;
   transition: opacity 250ms ease-out;
+}
+
+/* ─── Glass pill — shared visual treatment for floating UI chrome ──────────── */
+:where(
+  #freeze-indicator,
+  #loading-indicator,
+  #progress-indicator,
+  #color-picker,
+  #toolbar,
+  #empty-deck-cta
+) {
+  border-radius: 999px;
+  background: var(--pill-bg);
+  border: 1px solid var(--border-dark);
+  box-shadow: var(--pill-shadow);
+  backdrop-filter: blur(14px) saturate(160%);
+  color: var(--text);
+  user-select: none;
+}
+
+/* Heavier glass variant */
+:where(#loading-indicator, #empty-deck-cta) {
+  background: var(--pill-bg-strong);
+}
+
+#empty-deck-cta {
+  border-color: var(--border-dark-strong);
 }
 
 /* ─── Notes sidebar ─────────────────────────────────────────────────────────── */
@@ -158,7 +206,7 @@ body:not(.is-slideshow).speaker-mode #notes-resizer {
   background: rgba(22, 138, 254, 0.25);
 }
 
-#notes-panel.visible {
+body:not(.is-slideshow) #notes-panel.visible {
   display: block;
 }
 
@@ -167,7 +215,7 @@ body:not(.is-slideshow).speaker-mode #notes-resizer {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: #168afe;
+  color: var(--accent);
   margin-bottom: 6px;
   user-select: none;
 }
@@ -177,11 +225,6 @@ body:not(.is-slideshow).speaker-mode #notes-resizer {
   color: #1a2236;
   white-space: pre-wrap;   /* preserve explicit line breaks */
   word-break: break-word;  /* wrap long words inside the fixed panel width */
-}
-
-/* Notes panel must never appear in the mirrored slideshow window */
-body.is-slideshow #notes-panel {
-  display: none !important;
 }
 
 /* ─── Freeze-mode indicator ─────────────────────────────────────────────────── */
@@ -194,20 +237,7 @@ body.is-slideshow #notes-panel {
   align-items: center;
   gap: 8px;
   padding: 5px 12px 5px 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.55),
-    rgba(175, 182, 195, 0.45)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.18);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
-  color: #0b1220;
   pointer-events: none;
-  user-select: none;
   opacity: 0;
   z-index: 10;
   transition: opacity 180ms ease-out, transform 180ms ease-out;
@@ -223,7 +253,7 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #8fc4ff;
+  background: var(--glow);
   box-shadow: 0 0 0 0 rgba(143, 196, 255, 0.55);
   animation: freeze-pulse 1.8s ease-out infinite;
   flex: 0 0 auto;
@@ -233,7 +263,7 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
-  color: #0b1220;
+  color: var(--text);
 }
 
 #freeze-indicator .freeze-hint {
@@ -242,7 +272,7 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   color: rgba(11, 18, 32, 0.65);
   padding-left: 8px;
   margin-left: 2px;
-  border-left: 1px solid rgba(11, 18, 32, 0.18);
+  border-left: 1px solid var(--border-dark);
 }
 
 #freeze-indicator kbd {
@@ -250,8 +280,8 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   padding: 0 4px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(11, 18, 32, 0.22);
-  color: #0b1220;
+  border: 1px solid var(--border-dark-strong);
+  color: var(--text);
   font-family: inherit;
   font-size: 10.5px;
   font-weight: 500;
@@ -269,20 +299,7 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
   align-items: center;
   gap: 8px;
   padding: 5px 12px 5px 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.6),
-    rgba(175, 182, 195, 0.5)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.18);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
-  color: #0b1220;
   pointer-events: none;
-  user-select: none;
   opacity: 0;
   z-index: 20;
   transition: opacity 160ms ease-out, transform 160ms ease-out;
@@ -298,8 +315,8 @@ body.is-loading #loading-indicator {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1.5px solid rgba(11, 18, 32, 0.22);
-  border-top-color: #0b1220;
+  border: 1.5px solid var(--border-dark-strong);
+  border-top-color: var(--text);
   animation: loading-spin 0.8s linear infinite;
   flex: 0 0 auto;
 }
@@ -321,20 +338,7 @@ body.is-loading #loading-indicator {
   align-items: baseline;
   gap: 4px;
   padding: 3px 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.55),
-    rgba(175, 182, 195, 0.45)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.18);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
-  color: #0b1220;
   pointer-events: none;
-  user-select: none;
   z-index: 10;
   transform: translate(-100%, -100%);
 }
@@ -382,19 +386,6 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
   align-items: center;
   gap: 10px;
   padding: 7px 14px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.55),
-    rgba(175, 182, 195, 0.45)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.18);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
-  color: #0b1220;
-  user-select: none;
   opacity: 0;
   /* Parent toolbar sets pointer-events: none; re-enable for the picker so
      swatches and the custom-color input stay clickable. */
@@ -424,9 +415,7 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
   background: var(--c);
   padding: 0;
   cursor: pointer;
-  box-shadow:
-    0 0 0 1px rgba(11, 18, 32, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  box-shadow: var(--swatch-ring);
   transition: transform 120ms ease-out;
 }
 
@@ -437,8 +426,7 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
 #color-picker .cp-swatch.selected,
 #color-picker .cp-custom.selected .cp-custom-ring {
   box-shadow:
-    0 0 0 2px #0b1220,
-    0 0 0 3px rgba(255, 255, 255, 0.75),
+    var(--selected-ring),
     inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
@@ -510,9 +498,7 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
   display: block;
   border-radius: 50%;
   background: var(--dot, #0b1220);
-  box-shadow:
-    0 0 0 1px rgba(11, 18, 32, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  box-shadow: var(--swatch-ring);
   transition: transform 120ms ease-out;
 }
 
@@ -521,13 +507,7 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
 }
 
 #color-picker .cp-size.selected {
-  box-shadow:
-    0 0 0 2px #0b1220,
-    0 0 0 3px rgba(255, 255, 255, 0.75);
-}
-
-body.is-slideshow #color-picker {
-  display: none !important;
+  box-shadow: var(--selected-ring);
 }
 
 /* ─── Speaker toolbar (speaker window only) ─────────────────────────────────── */
@@ -540,19 +520,6 @@ body.is-slideshow #color-picker {
   align-items: center;
   gap: 2px;
   padding: 5px 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.55),
-    rgba(175, 182, 195, 0.45)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.18);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
-  color: #0b1220;
-  user-select: none;
   z-index: 12;
   /* Buttons opt-in to pointer events individually so drags between buttons
      pass through to the canvas (drawing/laser keep working). */
@@ -566,9 +533,10 @@ body.is-slideshow #color-picker {
   transform: translate(-50%, 12px);
 }
 
+/* opacity:0 elements are still hit-testable — disable clicks while hidden. */
 #toolbar.tb-hidden .tb-btn { pointer-events: none; }
 
-body.is-slideshow #toolbar { display: none !important; }
+body.is-slideshow #toolbar { display: none; }
 
 #toolbar .tb-btn {
   pointer-events: auto;
@@ -580,7 +548,7 @@ body.is-slideshow #toolbar { display: none !important; }
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #0b1220;
+  color: var(--text);
   cursor: pointer;
   padding: 0;
   margin: 0;
@@ -593,7 +561,7 @@ body.is-slideshow #toolbar { display: none !important; }
 }
 
 #toolbar .tb-btn.active {
-  background: #0b1220;
+  background: var(--text);
   color: #f3f5fa;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
@@ -612,7 +580,7 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
 }
 
 #toolbar .tb-btn[data-action="freeze"].active {
-  color: #8fc4ff;
+  color: var(--glow);
 }
 
 #toolbar .tb-btn:disabled {
@@ -621,7 +589,7 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
 }
 
 #toolbar .tb-btn:focus-visible {
-  outline: 2px solid rgba(22, 138, 254, 0.7);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -653,10 +621,8 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #168afe;
-  box-shadow:
-    0 0 0 1px rgba(11, 18, 32, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background: var(--accent);
+  box-shadow: var(--swatch-ring);
 }
 
 /* ─── Empty-deck CTA ────────────────────────────────────────────────────────
@@ -675,20 +641,8 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
   align-items: center;
   gap: 10px;
   padding: 14px 22px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(210, 215, 225, 0.6),
-    rgba(175, 182, 195, 0.5)
-  );
-  border: 1px solid rgba(11, 18, 32, 0.22);
-  box-shadow:
-    0 10px 30px -10px rgba(0, 0, 0, 0.5),
-    0 0 28px -8px rgba(143, 196, 255, 0.35);
-  backdrop-filter: blur(14px) saturate(160%);
   font-family: monospace;
   font-size: 13px;
-  color: #0b1220;
   cursor: pointer;
   z-index: 15;
   transition: background 120ms ease-out;
@@ -720,7 +674,7 @@ body.no-deck.is-loading:not(.is-slideshow) #empty-deck-cta {
 }
 
 #empty-deck-cta:focus-visible {
-  outline: 2px solid rgba(22, 138, 254, 0.7);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
