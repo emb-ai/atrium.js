@@ -25,8 +25,14 @@ import {
   toggleColorPicker,
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes } from './ui/notes.js';
-import { showLoading, updateLoading, hideLoading } from './ui/loading.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
+import {
+  initSlides,
+  getSlides,
+  preloadSlides,
+  pickDeck,
+  rebuildSlidesFromSources,
+} from './slides.js';
 import { initVideoSync, applyVideoSync, broadcastAllVideoStates } from './sync/video.js';
 import {
   IS_SLIDESHOW,
@@ -52,7 +58,6 @@ import { initKeybindings } from './ui/keybindings.js';
 import {
   on,
   currentSlide, setCurrentSlide,
-  setSlidesData,
   whiteboardMode, setWhiteboardMode,
   whiteboardSlides, pushWhiteboardPage,
   whiteboardCurrent, setWhiteboardCurrent,
@@ -82,17 +87,15 @@ initLaser({
 });
 
 // ─── Slides ───────────────────────────────────────────────────────────────────
-// `slides` is reassigned when the user loads a different deck from a folder
-// (see loadDeckFromFiles below), so it can't be const.
-let slides = document.querySelectorAll('.slide');
-setSlidesData(Array.from(slides).map(() => [])); // one empty stroke list per slide
+// The `slides` NodeList lives in slides.js (it's reassigned on deck load);
+// read it via getSlides() so references stay fresh after rebuilds.
 
 // Whiteboard mode: a separate stack of blank pages with their own strokes.
 // Starts with one empty page; more are appended on-demand when navigating past
 // the last one (and only if the current page already has something drawn).
 
 function showSlide(idx) {
-  if (idx < 0 || idx >= slides.length) return;
+  if (idx < 0 || idx >= getSlides().length) return;
   // Laser trail is per-viewBox and ephemeral — drop it on slide change so
   // stale points don't briefly render against the new slide's coordinate space.
   clearLaserPoints();
@@ -119,159 +122,6 @@ function navigate(delta) {
   setWhiteboardCurrent(target); // subscribers handle redraw / broadcast / toolbar
 }
 
-// ─── Preload SVGs into slide divs ─────────────────────────────────────────────
-function injectSvg(slide, svgText) {
-  const svgDoc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
-  slide.innerHTML = '';
-  slide.appendChild(svgDoc.documentElement);
-}
-
-async function preloadSlides() {
-  const fetchable = [...slides].filter(s => s.dataset.src);
-  if (fetchable.length) showLoading('Loading deck');
-  const promises = [...slides].map(async (slide, index) => {
-    const src = slide.dataset.src;
-    if (!src) return;
-    try {
-      const response = await fetch(src);
-      const svgText = await response.text();
-      injectSvg(slide, svgText);
-    } catch (err) {
-      console.error(`Failed to load slide ${index + 1}:`, err);
-      slide.textContent = `⚠️ Failed to load ${src}`;
-    }
-  });
-  await Promise.all(promises);
-  hideLoading();
-
-  updateActiveSlideClass();
-  setupCanvas();
-}
-
-// ─── Load deck from files picked by the user ─────────────────────────────────
-// Two accepted inputs from one button: either a multi-selection of SVG files
-// (ordinal filenames map to slide order) or a single PDF. PDF pages are
-// rasterized and wrapped in minimal SVGs so the existing slide pipeline
-// (viewBox-based normalization, broadcasting) works unchanged.
-function pickDeck() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.svg,.pdf,image/svg+xml,application/pdf';
-  input.multiple = true;
-  input.addEventListener('change', () => {
-    const files = Array.from(input.files || []);
-    if (files.length) loadDeckFromFiles(files);
-  });
-  input.click();
-}
-
-async function loadDeckFromFiles(files) {
-  const pdf = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
-  showLoading(pdf ? 'Rendering PDF' : 'Loading deck');
-  try {
-    const sources = pdf
-      ? await sourcesFromPdf(pdf)
-      : await sourcesFromSvgs(files);
-    if (!sources?.length) return;
-
-    // Broadcast before local rebuild: rebuilding locally triggers a state
-    // broadcast (via setSlidesData), and the slideshow needs the new deck in
-    // place before it applies that state.
-    broadcastDeck(sources);
-    rebuildSlidesFromSources(sources);
-  } finally {
-    hideLoading();
-  }
-}
-
-async function sourcesFromSvgs(files) {
-  const svgs = files
-    .filter(f => f.name.toLowerCase().endsWith('.svg'))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-  if (!svgs.length) return [];
-  const texts = await Promise.all(svgs.map(f => f.text()));
-  return svgs.map((file, i) => ({ name: file.name, svgText: texts[i] }));
-}
-
-// pdf.js is loaded on demand from vendor/ so the app stays dependency-free for
-// the common SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE
-// (relative to PDF's native 72dpi) then embedded as a PNG inside a tiny SVG
-// wrapper whose viewBox matches the page's PDF units — that's what
-// getReferenceBox() keys off for stroke normalization. Higher scale = crisper
-// on large displays at the cost of upfront render time and broadcast payload.
-const PDFJS_BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
-const PDF_RENDER_SCALE = 6;
-let pdfjsPromise = null;
-function loadPdfJs() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = import(/* @vite-ignore */ `${PDFJS_BASE}pdf.mjs`).then(mod => {
-      mod.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.mjs`;
-      return mod;
-    });
-  }
-  return pdfjsPromise;
-}
-
-async function sourcesFromPdf(file) {
-  let pdfjs;
-  try {
-    pdfjs = await loadPdfJs();
-  } catch (err) {
-    console.error('Failed to load pdf.js', err);
-    return [];
-  }
-  const data = await file.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data }).promise;
-  const sources = [];
-  for (let i = 1; i <= doc.numPages; i++) {
-    updateLoading(`Rendering PDF ${i}/${doc.numPages}`);
-    const page = await doc.getPage(i);
-    const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    const png = canvas.toDataURL('image/png');
-    const w = page.view[2] - page.view[0];
-    const h = page.view[3] - page.view[1];
-    const svgText =
-      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
-      `viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">` +
-      `<image href="${png}" xlink:href="${png}" width="${w}" height="${h}"/>` +
-      `</svg>`;
-    sources.push({ name: `${file.name}#${i}`, svgText });
-  }
-  return sources;
-}
-
-// Also used on the slideshow side when a 'deck' message arrives, so the
-// mirror can rebuild its #slides container to match the speaker's.
-function rebuildSlidesFromSources(sources) {
-  const container = document.getElementById('slides');
-  container.innerHTML = '';
-  sources.forEach(src => {
-    const div = document.createElement('div');
-    div.className = 'slide';
-    div.dataset.src = src.name;
-    injectSvg(div, src.svgText);
-    container.appendChild(div);
-  });
-
-  slides = document.querySelectorAll('.slide');
-  setCurrentSlide(0);
-  setSlidesData(Array.from(slides).map(() => [])); // emits 'strokes' → redraw + toolbar sync
-  updateActiveSlideClass();
-  setupCanvas();
-  // New deck = new <video> elements, which initVideoSync hasn't seen — re-run
-  // it so they get muted and (on speaker) wired for broadcast.
-  initVideoSync({
-    slides,
-    isSlideshow: IS_SLIDESHOW,
-    broadcast: postToSlideshow,
-  });
-}
-
 // ─── Size preview dot ─────────────────────────────────────────────────────────
 function changeStrokeSize(delta) {
   setLineWidth(Math.min(LINE_WIDTH_MAX, Math.max(LINE_WIDTH_MIN, lineWidth + delta)));
@@ -284,7 +134,7 @@ function changeStrokeSize(delta) {
 
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
 function getActiveSvg() {
-  return slides[currentSlide]?.querySelector('svg') || null;
+  return getSlides()[currentSlide]?.querySelector('svg') || null;
 }
 
 // Aspect ratio used for the whiteboard when there's no slide to borrow a
@@ -333,7 +183,7 @@ function redrawAll() {
     liveStroke: getMirroredLiveStroke(),
   });
   if (!IS_SLIDESHOW) {
-    const total = whiteboardMode ? whiteboardSlides.length : slides.length;
+    const total = whiteboardMode ? whiteboardSlides.length : getSlides().length;
     updateProgressIndicator({
       refBox,
       current: whiteboardMode ? whiteboardCurrent + 1 : currentSlide + 1,
@@ -373,7 +223,7 @@ function toggleFullscreen() {
 // sites no longer each have to remember to redraw / broadcast / re-sync.
 
 function updateActiveSlideClass() {
-  slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+  getSlides().forEach((s, i) => s.classList.toggle('active', i === currentSlide));
 }
 
 function updateWhiteboardBodyClass() {
@@ -413,14 +263,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Apply initial DOM state from the store before any fetches start.
   updateWhiteboardBodyClass();
 
-  await preloadSlides();
+  // Runs after the initial preload and after every deck rebuild: refresh the
+  // .active class, resize canvases, and (re)wire <video> listeners against
+  // the current slide set.
+  const onDeckChange = () => {
+    updateActiveSlideClass();
+    setupCanvas();
+    initVideoSync({
+      slides: getSlides(),
+      isSlideshow: IS_SLIDESHOW,
+      broadcast: postToSlideshow,
+    });
+  };
+  initSlides({ onDeckChange });
 
-  setupCanvas();
-  initVideoSync({
-    slides,
-    isSlideshow: IS_SLIDESHOW,
-    broadcast: postToSlideshow,
-  });
+  await preloadSlides();
   initSpeakerLink({
     getLiveStroke: getLiveStrokePoints,
     onStateApplied: redrawAll,
@@ -495,7 +352,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   initToolbar({
-    getSlideCount: () => slides.length,
+    getSlideCount: () => getSlides().length,
     isSlideshowOpen,
     isFrozen,
     isBusy,
