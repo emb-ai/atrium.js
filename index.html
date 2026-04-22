@@ -67,7 +67,7 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <span class="tb-sep"></span>
-      <button type="button" class="tb-btn tb-btn-cursor" data-action="cursor" title="Cursor (M)" aria-label="Toggle cursor mode">
+      <button type="button" class="tb-btn tb-btn-cursor" data-action="cursor" title="Cursor (C)" aria-label="Toggle cursor mode">
         <img src="cursor.svg" alt="" aria-hidden="true">
       </button>
       <button type="button" class="tb-btn" data-action="laser" title="Laser pointer (L)" aria-label="Toggle laser pointer">
@@ -77,12 +77,12 @@
         <svg viewBox="16 16 68 68" aria-hidden="true"><path fill="currentColor" d="M74.15 20.4Q71.6 18 68.4 18 65.15 18 62.75 20.4L28.45 54.75Q26.9 56.25 24.6 59.45 22.15 62.95 22 64.45L18 82 35.7 78Q43.8 73.35 45.45 71.7L79.75 37.45Q82 35 82 31.75 82 28.5 79.75 26L74.15 20.4M65.6 23.25Q66.75 22 68.4 22 70 22 71.25 23.25L76.9 28.9Q78 30 78 31.75 78 33.45 76.9 34.5L71.25 40.25 59.95 28.9 65.6 23.25M57.1 31.75 68.4 43 42.5 68.95Q41.85 69.6 38.6 71.6L28.2 61.25 31.2 57.6 57.1 31.75M26.1 64.7 35.1 73.7 34.2 74.35 23.45 76.7 26 65.35 26 64.85 26.1 64.7Z"/></svg>
       </button>
       <span class="tb-color-wrap">
-        <button type="button" class="tb-btn" data-action="color" title="Stroke color (C)" aria-label="Stroke color">
+        <button type="button" class="tb-btn" data-action="color" title="Color picker (P)" aria-label="Color picker">
           <span class="tb-color-dot"></span>
         </button>
-        <!-- Color/size picker (main window only; toggled with C in drawing mode).
+        <!-- Color/size picker (main window only; toggled with P in drawing mode).
              Anchored above the color button via .tb-color-wrap. -->
-        <div id="color-picker" aria-hidden="true" role="toolbar" aria-label="Stroke color and size">
+        <div id="color-picker" aria-hidden="true" role="toolbar" aria-label="Color picker">
           <div class="cp-swatches"></div>
           <span class="cp-sep"></span>
           <label class="cp-custom" title="Custom color">

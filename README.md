@@ -47,13 +47,13 @@ with the slideshow window.
 | Key            | Action                                       |
 | -------------- | -------------------------------------------- |
 | `←` / `→`      | Previous / next slide                        |
-| `M`            | Toggle mouse (cursor) mode                   |
+| `C`            | Toggle mouse (cursor) mode                   |
 | `D`            | Toggle drawing mode                          |
 | `B`            | Toggle whiteboard mode (blank pages)         |
 | `L`            | Toggle laser pointer (short-living trace)    |
 | `S`            | Open / close the slideshow (mirror) window   |
 | `F`            | Freeze the slideshow mirror at current state |
-| `C`            | Toggle stroke color / size picker (drawing)  |
+| `P`            | Toggle color and size picker (drawing)                |
 | `+` / `-`      | Increase / decrease stroke size              |
 | `Ctrl+Z`       | Undo last stroke on current slide            |
 | Left mouse     | Draw                                         |

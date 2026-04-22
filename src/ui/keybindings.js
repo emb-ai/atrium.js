@@ -15,8 +15,8 @@ export function initKeybindings(actions) {
       case 'f': e.preventDefault(); actions.freeze();     break;
       case 'd': e.preventDefault(); actions.draw();       break;
       case 'l': e.preventDefault(); actions.laser();      break;
-      case 'm': e.preventDefault(); actions.cursor();     break;
-      case 'c': e.preventDefault(); actions.color();      break;
+      case 'c': e.preventDefault(); actions.cursor();     break;
+      case 'p': e.preventDefault(); actions.color();      break;
       case 's': e.preventDefault(); actions.slideshow();  break;
       case 'b': e.preventDefault(); actions.whiteboard(); break;
       case 'arrowright': actions.next(); break;
