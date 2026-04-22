@@ -24,7 +24,7 @@ import {
   buildColorPicker,
   toggleColorPicker,
 } from './ui/color-picker.js';
-import { initNotes, showNotes, hideNotes } from './ui/notes.js';
+import { initNotes, showNotes, hideNotes, updateNotesContent } from './ui/notes.js';
 import { initHelp, toggleHelp, closeHelp } from './ui/help.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
 import {
@@ -246,6 +246,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       isSlideshow: IS_SLIDESHOW,
       broadcast: postToSlideshow,
     });
+    updateNotesContent();
     syncToolbar();
   };
   initSlides({ onDeckChange });

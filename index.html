@@ -161,10 +161,17 @@
   </div>
 
   <!-- Drag handle between canvas and notes; speaker window only. -->
-  <div id="notes-resizer" role="separator" aria-orientation="vertical" aria-label="Resize notes panel"></div>
+  <div id="notes-resizer" role="separator" aria-orientation="vertical" aria-label="Resize notes panel">
+    <button type="button" id="notes-toggle" aria-label="Hide notes panel" title="Hide notes panel">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
 
   <!-- Speaker notes bar — visible in speaker window when slideshow window is open -->
   <div id="notes-panel" aria-live="polite">
+    <div id="next-preview" aria-hidden="true">
+      <div id="next-preview-thumb"></div>
+    </div>
     <span id="notes-label">Notes</span>
     <div id="notes-content"></div>
   </div>

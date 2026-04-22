@@ -13,9 +13,11 @@ const NOTES_MIN_WIDTH = 200;
 // handle can't shrink the drawing area to nothing.
 const CANVAS_MIN_WIDTH = 320;
 
-const notesPanel   = document.getElementById('notes-panel');
-const notesContent = document.getElementById('notes-content');
-const notesResizer = document.getElementById('notes-resizer');
+const notesPanel      = document.getElementById('notes-panel');
+const notesContent    = document.getElementById('notes-content');
+const notesResizer    = document.getElementById('notes-resizer');
+const nextPreview     = document.getElementById('next-preview');
+const nextPreviewThumb = document.getElementById('next-preview-thumb');
 
 const slideNotes = Array.from(document.querySelectorAll('.slide')).map(
   s => s.dataset.notes || '',
@@ -31,6 +33,22 @@ export function initNotes({ onVisibilityChange: cb } = {}) {
   on('slide', updateNotesContent);
   on('whiteboard', updateNotesContent);
   if (notesResizer) wireResizer();
+  wireNotesToggle();
+}
+
+function wireNotesToggle() {
+  const btn = document.getElementById('notes-toggle');
+  if (!btn) return;
+  // Keep the resizer's pointerdown handler from starting a drag when the
+  // user clicks the toggle button.
+  btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const hidden = document.body.classList.toggle('notes-collapsed');
+    btn.setAttribute('aria-label', hidden ? 'Show notes panel' : 'Hide notes panel');
+    btn.title = hidden ? 'Show notes panel' : 'Hide notes panel';
+    onVisibilityChange();
+  });
 }
 
 function wireResizer() {
@@ -66,8 +84,24 @@ function wireResizer() {
   notesResizer.addEventListener('pointercancel', endDrag);
 }
 
-function updateNotesContent() {
+export function updateNotesContent() {
   notesContent.textContent = whiteboardMode ? '' : (slideNotes[currentSlide] || '');
+  updateNextPreview();
+}
+
+function updateNextPreview() {
+  if (!nextPreview || !nextPreviewThumb) return;
+  nextPreviewThumb.innerHTML = '';
+  const slides = document.querySelectorAll('.slide');
+  const nextSvg = !whiteboardMode && currentSlide + 1 < slides.length
+    ? slides[currentSlide + 1].querySelector('svg')
+    : null;
+  if (!nextSvg) {
+    nextPreview.classList.add('hidden');
+    return;
+  }
+  nextPreview.classList.remove('hidden');
+  nextPreviewThumb.appendChild(nextSvg.cloneNode(true));
 }
 
 export function showNotes() {
