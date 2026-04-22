@@ -704,7 +704,7 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
   top: 50%;
   transform: translate(-50%, -50%);
   display: none;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   padding: 14px 22px;
   font-family: monospace;
@@ -730,6 +730,7 @@ body.no-deck.whiteboard-mode:not(.is-slideshow) #empty-deck-cta {
   width: 18px;
   height: 18px;
   display: block;
+  transform: translateY(1.75px);
 }
 
 #empty-deck-cta:hover {
