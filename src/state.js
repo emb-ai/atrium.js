@@ -73,7 +73,7 @@ export function pushWhiteboardPage() {
 
 // ─── Interaction mode ────────────────────────────────────────────────────────
 // Mutually exclusive. Exactly one of these is active at any time:
-//   'draw'   — pencil; left-click draws, right-click erases.
+//   'draw'   — left-click draws, right-click erases.
 //   'laser'  — red fading pointer trail.
 //   'cursor' — neutral; canvas transparent to pointer events (OS cursor shows).
 // Draw and laser both require canvas pointer events; cursor disables them.

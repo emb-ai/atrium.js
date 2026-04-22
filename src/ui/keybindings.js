@@ -13,7 +13,7 @@ export function initKeybindings(actions) {
 
     switch (e.key.toLowerCase()) {
       case 'f': e.preventDefault(); actions.freeze();     break;
-      case 'p': e.preventDefault(); actions.draw();       break;
+      case 'd': e.preventDefault(); actions.draw();       break;
       case 'l': e.preventDefault(); actions.laser();      break;
       case 'm': e.preventDefault(); actions.cursor();     break;
       case 'c': e.preventDefault(); actions.color();      break;
