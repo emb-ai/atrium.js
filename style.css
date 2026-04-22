@@ -348,7 +348,7 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
   display: inline-flex;
 }
 
-#progress-indicator.is-empty {
+body:not(.is-slideshow) #progress-indicator.is-empty {
   display: none;
 }
 
