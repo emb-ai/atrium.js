@@ -721,7 +721,8 @@ body.no-deck:not(.is-slideshow) #empty-deck-cta {
 /* Hide while a deck is being imported so the CTA doesn't sit behind the
    centered loading spinner. Specificity must beat the `body.no-deck…`
    show rule above, hence the matching class count. */
-body.no-deck.is-loading:not(.is-slideshow) #empty-deck-cta {
+body.no-deck.is-loading:not(.is-slideshow) #empty-deck-cta,
+body.no-deck.whiteboard-mode:not(.is-slideshow) #empty-deck-cta {
   display: none;
 }
 
