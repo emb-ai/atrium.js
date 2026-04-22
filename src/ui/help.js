@@ -1,6 +1,6 @@
-// Keybinding cheatsheet overlay. Toggled via `?`, dismissed via `?` or Escape
-// (or a click on the backdrop). Speaker window only — CSS hides it in the
-// slideshow window so there's no state to guard here.
+// Keybinding cheatsheet overlay. Toggled via `?` (or a click on the
+// backdrop). Speaker window only — CSS hides it in the slideshow window
+// so there's no state to guard here.
 
 let overlay = null;
 

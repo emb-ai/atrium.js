@@ -25,7 +25,7 @@ import {
   toggleColorPicker,
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes, updateNotesContent } from './ui/notes.js';
-import { initHelp, toggleHelp, closeHelp } from './ui/help.js';
+import { initHelp, toggleHelp } from './ui/help.js';
 import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
 import {
   initSlides,
@@ -329,7 +329,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(+1); },
     sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-1); },
     help:       toggleHelp,
-    closeHelp:  closeHelp,
   };
 
   initToolbar({
