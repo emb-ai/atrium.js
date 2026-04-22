@@ -686,6 +686,72 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
     inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
+/* ─── Empty-deck CTA ────────────────────────────────────────────────────────
+   Standalone button shown in the speaker window when no slides are loaded.
+   Positioned absolute inside .canvas-wrap (which has no transform), so it
+   genuinely centers on the canvas area — unlike a child of #toolbar, whose
+   transform would otherwise act as the containing block. The toolbar's
+   own "Load deck" button stays at the bottom so it remains available after
+   a deck is loaded. */
+#empty-deck-cta {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.6),
+    rgba(175, 182, 195, 0.5)
+  );
+  border: 1px solid rgba(11, 18, 32, 0.22);
+  box-shadow:
+    0 10px 30px -10px rgba(0, 0, 0, 0.5),
+    0 0 28px -8px rgba(143, 196, 255, 0.35);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  font-family: monospace;
+  font-size: 13px;
+  color: #0b1220;
+  cursor: pointer;
+  z-index: 15;
+  transition: background 120ms ease-out;
+}
+
+body.no-deck:not(.is-slideshow) #empty-deck-cta {
+  display: inline-flex;
+}
+
+/* Hide while a deck is being imported so the CTA doesn't sit behind the
+   centered loading spinner. Specificity must beat the `body.no-deck…`
+   show rule above, hence the matching class count. */
+body.no-deck.is-loading:not(.is-slideshow) #empty-deck-cta {
+  display: none;
+}
+
+#empty-deck-cta svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+#empty-deck-cta:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(210, 215, 225, 0.75),
+    rgba(175, 182, 195, 0.65)
+  );
+}
+
+#empty-deck-cta:focus-visible {
+  outline: 2px solid rgba(22, 138, 254, 0.7);
+  outline-offset: 2px;
+}
+
 @keyframes freeze-pulse {
   0%   { box-shadow: 0 0 0 0   rgba(143, 196, 255, 0.55); }
   70%  { box-shadow: 0 0 0 10px rgba(143, 196, 255, 0);   }

@@ -268,12 +268,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   // the current slide set.
   const onDeckChange = () => {
     updateActiveSlideClass();
+    document.body.classList.toggle('no-deck', getSlides().length === 0);
     setupCanvas();
     initVideoSync({
       slides: getSlides(),
       isSlideshow: IS_SLIDESHOW,
       broadcast: postToSlideshow,
     });
+    syncToolbar();
   };
   initSlides({ onDeckChange });
 
@@ -359,5 +361,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     actions,
   });
   initKeybindings(actions);
+  document.getElementById('empty-deck-cta')?.addEventListener('click', pickDeck);
   toggleCursorMode();
 });
