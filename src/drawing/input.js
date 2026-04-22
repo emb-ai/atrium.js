@@ -26,9 +26,9 @@ const ERASE_THRESHOLD = 20;
 let isDrawing = false;
 let isErasing = false;
 let currentPoints = [];
-// Cursor starts off-canvas so the size-preview dot doesn't flash at (0,0)
-// before the user has actually moved the pointer onto the canvas.
-let cursorPos = { x: -999, y: -999 };
+// null until the user has actually moved the pointer onto the canvas, so
+// the size-preview dot doesn't flash at (0,0) before that.
+let cursorPos = null;
 let cfg = null;
 
 export function initInput(config) {

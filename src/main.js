@@ -19,7 +19,7 @@ import {
   clearLaserPoints,
   startLaserLoop,
 } from './drawing/laser.js';
-import { showSizeDot } from './ui/size-dot.js';
+import { changeStrokeSize } from './ui/stroke-size.js';
 import {
   buildColorPicker,
   toggleColorPicker,
@@ -45,12 +45,10 @@ import {
   toggleSpeakerMode,
   toggleFreeze,
   postToSlideshow,
-  broadcastDeck,
 } from './sync/speaker.js';
 import {
   initInput,
   isBusy,
-  getCursorPos,
   getLiveStrokePoints,
   resetPointerState,
 } from './drawing/input.js';
@@ -61,30 +59,11 @@ import {
   whiteboardMode, setWhiteboardMode,
   whiteboardSlides, pushWhiteboardPage,
   whiteboardCurrent, setWhiteboardCurrent,
-  strokeColor,
-  lineWidth, setLineWidth,
   getActiveStrokes as getStrokes,
   strokesChanged,
-  setMode,
-  MODE_DRAW, MODE_LASER, MODE_CURSOR,
-  isDrawMode, isLaserMode, isCursorMode, isPointerCaptureOn,
+  toggleDraw, toggleLaser, toggleCursor,
+  isDrawMode, isLaserMode, isPointerCaptureOn,
 } from './state.js';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const LINE_WIDTH_MIN = 1;
-const LINE_WIDTH_MAX = 40;
-const LINE_WIDTH_STEP = 2;
-
-// Laser module uses callbacks to stay agnostic of speaker-vs-slideshow role:
-// speaker keeps the RAF loop alive while laser mode is on *or* there are
-// still fading points; slideshow only keeps it alive while mirrored points
-// are still fading out.
-initLaser({
-  getRefBox: getReferenceBox,
-  shouldContinue: () => IS_SLIDESHOW
-    ? getLaserPoints().length > 0
-    : isLaserMode() || getLaserPoints().length > 0,
-});
 
 // ─── Slides ───────────────────────────────────────────────────────────────────
 // The `slides` NodeList lives in slides.js (it's reassigned on deck load);
@@ -122,21 +101,7 @@ function navigate(delta) {
   setWhiteboardCurrent(target); // subscribers handle redraw / broadcast / toolbar
 }
 
-// ─── Size preview dot ─────────────────────────────────────────────────────────
-function changeStrokeSize(delta) {
-  setLineWidth(Math.min(LINE_WIDTH_MAX, Math.max(LINE_WIDTH_MIN, lineWidth + delta)));
-  // 'style' subscribers reapply context pens, sync the toolbar and picker.
-  // The sentinel in getCursorPos() keeps the dot from flashing at (0, 0)
-  // before the pointer has ever been on the canvas.
-  const pos = getCursorPos();
-  if (pos.x !== -999) showSizeDot(pos, lineWidth, strokeColor);
-}
-
 // ─── Canvas helpers ───────────────────────────────────────────────────────────
-function getActiveSvg() {
-  return getSlides()[currentSlide]?.querySelector('svg') || null;
-}
-
 // Aspect ratio used for the whiteboard when there's no slide to borrow a
 // viewBox from (empty deck). Both windows compute the same letterbox from
 // this, so strokes drawn on the whiteboard in speaker mode mirror correctly
@@ -151,17 +116,8 @@ const DEFAULT_WHITEBOARD_ASPECT = 16 / 9;
 // page keeps its proportions across resizes and between the speaker /
 // slideshow windows.
 function getReferenceBox() {
-  const svg = getActiveSvg();
-  const canvasSize = getCanvasCssSize();
-  if (svg) return computeReferenceBox(svg, canvasSize);
-  return letterbox(DEFAULT_WHITEBOARD_ASPECT, canvasSize);
-}
-
-function letterbox(aspect, { width, height }) {
-  const scale = Math.min(width / aspect, height);
-  const w = aspect * scale;
-  const h = scale;
-  return { x: (width - w) / 2, y: (height - h) / 2, width: w, height: h };
+  const svg = getSlides()[currentSlide]?.querySelector('svg') || null;
+  return computeReferenceBox(svg, getCanvasCssSize(), DEFAULT_WHITEBOARD_ASPECT);
 }
 
 // Resize both canvases and redraw. Wraps the pure resize from canvas.js
@@ -194,15 +150,10 @@ function redrawAll() {
 }
 
 // ─── Toggles ──────────────────────────────────────────────────────────────────
-// Each toggle flips between its mode and the neutral cursor mode (draw/laser)
-// or between cursor and draw (M). The 'mode' subscribers fan out the
-// DOM/cursor/broadcast/toolbar side-effects — the mutually-exclusive
-// bookkeeping lives in one place instead of three. Existing laser points
-// intentionally stay put when leaving laser so the trail fades out
-// naturally; the RAF loop stops itself once they expire.
-function toggleDrawing()    { setMode(isDrawMode()   ? MODE_CURSOR : MODE_DRAW);   }
-function toggleLaser()      { setMode(isLaserMode()  ? MODE_CURSOR : MODE_LASER);  }
-function toggleCursorMode() { setMode(isCursorMode() ? MODE_DRAW   : MODE_CURSOR); }
+// Mode toggles live in state.js (toggleDraw / toggleLaser / toggleCursor);
+// 'mode' subscribers fan out the DOM/cursor/broadcast/toolbar side-effects.
+// Existing laser points intentionally stay put when leaving laser so the
+// trail fades out naturally; the RAF loop stops itself once they expire.
 
 function toggleWhiteboard() {
   resetPointerState();
@@ -260,6 +211,17 @@ on('mode', onModeChanged);
 window.addEventListener('DOMContentLoaded', async () => {
   // Apply initial DOM state from the store before any fetches start.
   updateWhiteboardBodyClass();
+
+  // Laser module uses callbacks to stay agnostic of speaker-vs-slideshow role:
+  // speaker keeps the RAF loop alive while laser mode is on *or* there are
+  // still fading points; slideshow only keeps it alive while mirrored points
+  // are still fading out.
+  initLaser({
+    getRefBox: getReferenceBox,
+    shouldContinue: () => IS_SLIDESHOW
+      ? getLaserPoints().length > 0
+      : isLaserMode() || getLaserPoints().length > 0,
+  });
 
   // Runs after the initial preload and after every deck rebuild: refresh the
   // .active class, resize canvases, and (re)wire <video> listeners against
@@ -327,9 +289,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const actions = {
     prev:       () => navigate(-1),
     next:       () => navigate(1),
-    draw:       toggleDrawing,
+    draw:       toggleDraw,
     laser:      toggleLaser,
-    cursor:     toggleCursorMode,
+    cursor:     toggleCursor,
     color:      () => {
       if (!isDrawMode()) return;
       toggleColorPicker();
@@ -347,8 +309,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     freeze:     toggleFreeze,
     fullscreen: toggleFullscreen,
     loadDeck:   pickDeck,
-    sizeUp:     () => { if (isDrawMode()) changeStrokeSize(LINE_WIDTH_STEP); },
-    sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-LINE_WIDTH_STEP); },
+    sizeUp:     () => { if (isDrawMode()) changeStrokeSize(+1); },
+    sizeDown:   () => { if (isDrawMode()) changeStrokeSize(-1); },
   };
 
   initToolbar({
@@ -360,5 +322,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   initKeybindings(actions);
   document.getElementById('empty-deck-cta')?.addEventListener('click', pickDeck);
-  toggleCursorMode();
+  toggleCursor();
 });

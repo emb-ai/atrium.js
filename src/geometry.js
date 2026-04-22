@@ -21,24 +21,23 @@ export function parsePreserveAspectRatio(svg) {
 // Compute the on-screen rectangle the SVG's viewBox occupies inside a
 // canvas of `canvasSize`, replicating SVG's preserveAspectRatio math
 // (meet/slice, xMid/xMax/YMid/YMax). When `svg` is null or degenerate,
-// falls back to the full canvas.
-export function computeReferenceBox(svg, canvasSize) {
-  if (!svg) {
-    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
-  }
+// returns an aspect-ratio letterbox if `fallbackAspect` is given,
+// otherwise the full canvas.
+export function computeReferenceBox(svg, canvasSize, fallbackAspect = null) {
+  const fallback = () => fallbackAspect
+    ? letterbox(fallbackAspect, canvasSize)
+    : { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
+
+  if (!svg) return fallback();
 
   const viewBox = svg.viewBox?.baseVal;
   const vbWidth = viewBox?.width || parseFloat(svg.getAttribute('width')) || canvasSize.width;
   const vbHeight = viewBox?.height || parseFloat(svg.getAttribute('height')) || canvasSize.height;
 
-  if (!vbWidth || !vbHeight) {
-    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
-  }
+  if (!vbWidth || !vbHeight) return fallback();
 
   const { align, mode } = parsePreserveAspectRatio(svg);
-  if (align === 'none') {
-    return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
-  }
+  if (align === 'none') return fallback();
 
   const scale = mode === 'slice'
     ? Math.max(canvasSize.width / vbWidth, canvasSize.height / vbHeight)
@@ -57,6 +56,13 @@ export function computeReferenceBox(svg, canvasSize) {
   else if (align.includes('YMax')) y = canvasSize.height - height;
 
   return { x, y, width, height };
+}
+
+function letterbox(aspect, { width, height }) {
+  const scale = Math.min(width / aspect, height);
+  const w = aspect * scale;
+  const h = scale;
+  return { x: (width - w) / 2, y: (height - h) / 2, width: w, height: h };
 }
 
 export function normalizePoint(point, refBox) {

@@ -1,12 +1,18 @@
-// Transient preview dot shown at the cursor after a stroke-size change.
-// Size + color are supplied by the caller so this module stays free of
-// state-store imports — it's a pure "blink a dot here" primitive.
+// Transient preview dot shown at the cursor after a stroke-size change,
+// plus the clamped "bump the line width" helper that drives it.
 //
 // The dot fades out on its own after SHOW_DURATION_MS via a CSS transition
 // driven by the `.fade` class; calling showSizeDot() again resets that
 // timer and re-triggers the transition.
 
+import { lineWidth, setLineWidth, strokeColor } from '../state.js';
+import { getCursorPos } from '../drawing/input.js';
+
 const SHOW_DURATION_MS = 350;
+
+const LINE_WIDTH_MIN = 1;
+const LINE_WIDTH_MAX = 40;
+const LINE_WIDTH_STEP = 2;
 
 const sizeDot = document.createElement('div');
 sizeDot.id = 'size-dot';
@@ -33,4 +39,16 @@ export function showSizeDot(pos, size, color) {
   hideTimer = setTimeout(() => {
     sizeDot.classList.add('fade');
   }, SHOW_DURATION_MS);
+}
+
+// Change the stroke width by one step in the given direction (+1 / -1),
+// clamped to [LINE_WIDTH_MIN, LINE_WIDTH_MAX], then preview the new
+// diameter at the cursor. Skips the preview until the pointer has been
+// on the canvas at least once.
+export function changeStrokeSize(sign) {
+  const next = lineWidth + sign * LINE_WIDTH_STEP;
+  setLineWidth(Math.min(LINE_WIDTH_MAX, Math.max(LINE_WIDTH_MIN, next)));
+  // 'style' subscribers reapply context pens, sync the toolbar and picker.
+  const pos = getCursorPos();
+  if (pos) showSizeDot(pos, lineWidth, strokeColor);
 }
