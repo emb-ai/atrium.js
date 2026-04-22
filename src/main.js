@@ -235,9 +235,7 @@ function syncModeDom() {
   document.body.classList.toggle('drawing-enabled', captureOn);
   document.body.classList.toggle('drawing-disabled', !captureOn);
   document.body.classList.toggle('laser-mode', isLaserMode());
-  document.body.classList.toggle('cursor-mode', isCursorMode());
   el.classList.toggle('drawing-disabled', !captureOn);
-  tmp.classList.toggle('drawing-disabled', !captureOn);
 }
 
 function onModeChanged() {

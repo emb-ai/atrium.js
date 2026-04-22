@@ -70,10 +70,6 @@ body.whiteboard-mode #whiteboard-page {
   pointer-events: none;
 }
 
-.drawing-disabled .slide {
-  pointer-events: auto;
-}
-
 canvas {
   position: absolute;
   top: 0;
@@ -99,16 +95,12 @@ body.laser-mode #c {
   cursor: none;
 }
 
-#c {
-  background: transparent;
-}
-
 #tmp {
   pointer-events: none;
 }
 
 canvas.drawing-disabled {
-  pointer-events: none !important;
+  pointer-events: none;
   cursor: default;
 }
 
@@ -118,7 +110,6 @@ canvas.drawing-disabled {
   background: #168afe;
   pointer-events: none;
   opacity: 0;
-  transform: translate(0, 0);
 }
 
 #size-dot.visible {
@@ -174,7 +165,6 @@ body:not(.is-slideshow).speaker-mode #notes-resizer {
 #notes-label {
   display: block;
   font-size: 10px;
-  font-family: monospace;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: #168afe;
@@ -184,7 +174,6 @@ body:not(.is-slideshow).speaker-mode #notes-resizer {
 
 #notes-content {
   font-size: 12.5px;
-  font-family: monospace;
   color: #1a2236;
   white-space: pre-wrap;   /* preserve explicit line breaks */
   word-break: break-word;  /* wrap long words inside the fixed panel width */
@@ -216,8 +205,6 @@ body.is-slideshow #notes-panel {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  font-family: monospace;
   color: #0b1220;
   pointer-events: none;
   user-select: none;
@@ -251,7 +238,6 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
 
 #freeze-indicator .freeze-hint {
   font-size: 11px;
-  font-weight: 400;
   letter-spacing: 0;
   color: rgba(11, 18, 32, 0.65);
   padding-left: 8px;
@@ -294,8 +280,6 @@ body.is-frozen:not(.is-slideshow) #freeze-indicator {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  font-family: monospace;
   color: #0b1220;
   pointer-events: none;
   user-select: none;
@@ -322,7 +306,6 @@ body.is-loading #loading-indicator {
 
 #loading-indicator .loading-label {
   font-size: 12px;
-  font-weight: 400;
   letter-spacing: 0;
   color: rgba(11, 18, 32, 0.78);
 }
@@ -349,8 +332,6 @@ body.is-loading #loading-indicator {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  font-family: monospace;
   color: #0b1220;
   pointer-events: none;
   user-select: none;
@@ -369,20 +350,17 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
 
 #progress-indicator .progress-current {
   font-size: 11px;
-  font-weight: 400;
   letter-spacing: 0;
   color: rgba(11, 18, 32, 0.9);
 }
 
 #progress-indicator .progress-sep {
   font-size: 11px;
-  font-weight: 400;
   color: rgba(11, 18, 32, 0.45);
 }
 
 #progress-indicator .progress-total {
   font-size: 11px;
-  font-weight: 400;
   letter-spacing: 0;
   color: rgba(11, 18, 32, 0.65);
 }
@@ -415,8 +393,6 @@ body:not(.is-slideshow).whiteboard-mode #progress-indicator {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  font-family: monospace;
   color: #0b1220;
   user-select: none;
   opacity: 0;
@@ -508,7 +484,6 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
   background: transparent;
   outline: none;
   appearance: none;
-  -webkit-appearance: none;
 }
 
 #color-picker .cp-sizes {
@@ -576,8 +551,6 @@ body.is-slideshow #color-picker {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  font-family: monospace;
   color: #0b1220;
   user-select: none;
   z-index: 12;
@@ -713,7 +686,6 @@ body.speaker-mode #toolbar .tb-btn[data-action="freeze"] {
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 28px -8px rgba(143, 196, 255, 0.35);
   backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
   font-family: monospace;
   font-size: 13px;
   color: #0b1220;
