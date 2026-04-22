@@ -2,11 +2,6 @@ Speaker mode:
 * timer
 * (?) overlay mode for notes
 
-Drawing:
-* (?) export drawings to svg
-* (?) persist drawings in localstorage
-* (?) saving all action timestamps for full reproduction of slideshow
-
 Documentation:
 * demonstration of functionality (video)
 * running locally
