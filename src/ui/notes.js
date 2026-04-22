@@ -67,12 +67,7 @@ function wireResizer() {
 }
 
 function updateNotesContent() {
-  if (whiteboardMode) {
-    notesContent.textContent = '(whiteboard mode)';
-    return;
-  }
-  const text = slideNotes[currentSlide] || '';
-  notesContent.textContent = text || '(no notes for this slide)';
+  notesContent.textContent = whiteboardMode ? '' : (slideNotes[currentSlide] || '');
 }
 
 export function showNotes() {
