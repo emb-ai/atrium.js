@@ -78,6 +78,12 @@ async function loadDeckFromFiles(files) {
     // place before it applies that state.
     broadcastDeck(sources);
     rebuildSlidesFromSources(sources);
+    // Fresh speaker-side deck load starts at page 1. The slideshow side skips
+    // this reset — the `state` message that follows the `deck` message is
+    // authoritative, and resetting here would briefly flash slide 0 before
+    // the speaker's actual current slide is applied (notably for PDF decks,
+    // where the slideshow boots with an empty #slides container).
+    setCurrentSlide(0);
   } finally {
     hideLoading();
   }
@@ -158,7 +164,6 @@ export function rebuildSlidesFromSources(sources) {
   });
 
   slides = document.querySelectorAll('.slide');
-  setCurrentSlide(0);
   setSlidesData(Array.from(slides).map(() => [])); // emits 'strokes' → redraw + toolbar sync
   afterDeckChange();
 }

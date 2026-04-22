@@ -43,11 +43,15 @@ let cfg = null;
 if (IS_SLIDESHOW) document.body.classList.add('is-slideshow');
 document.title = IS_SLIDESHOW ? 'Slideshow' : 'Speaker';
 
-// Slideshow can boot straight into whiteboard mode via ?whiteboard=1 —
-// without this, the audience sees a flash of real slides between page load
-// and the first `state` message arriving.
-if (IS_SLIDESHOW && new URLSearchParams(location.search).get('whiteboard') === '1') {
-  setWhiteboardMode(true);
+// Slideshow can boot straight into whiteboard mode via ?whiteboard=1 and onto
+// the speaker's current slide via ?slide=N — without these, the audience sees
+// a flash of real slides (or slide 0) between page load and the first `state`
+// message arriving.
+if (IS_SLIDESHOW) {
+  const params = new URLSearchParams(location.search);
+  if (params.get('whiteboard') === '1') setWhiteboardMode(true);
+  const slideParam = Number.parseInt(params.get('slide'), 10);
+  if (Number.isFinite(slideParam) && slideParam >= 0) setCurrentSlide(slideParam);
 }
 
 export function initSpeakerLink(config) {
@@ -156,6 +160,7 @@ export function toggleSpeakerMode() {
 
   const params = new URLSearchParams({ slideshow: '1' });
   if (whiteboardMode) params.set('whiteboard', '1');
+  if (currentSlide) params.set('slide', String(currentSlide));
   slideshowWin = window.open(
     location.pathname + '?' + params.toString() + location.hash,
     'slideshow',
