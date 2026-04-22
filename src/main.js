@@ -81,6 +81,16 @@ function showSlide(idx) {
   setCurrentSlide(idx); // subscribers handle redraw / broadcast / notes / toolbar / .active
 }
 
+function jumpTo(idx) {
+  if (!whiteboardMode) {
+    showSlide(idx);
+    return;
+  }
+  const target = Math.max(0, Math.min(idx, whiteboardSlides.length - 1));
+  clearLaserPoints();
+  setWhiteboardCurrent(target);
+}
+
 function navigate(delta) {
   if (!whiteboardMode) {
     showSlide(currentSlide + delta);
@@ -289,6 +299,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   const actions = {
     prev:       () => navigate(-1),
     next:       () => navigate(1),
+    first:      () => jumpTo(0),
+    last:       () => jumpTo(
+      (whiteboardMode ? whiteboardSlides.length : getSlides().length) - 1,
+    ),
     draw:       toggleDraw,
     laser:      toggleLaser,
     cursor:     toggleCursor,

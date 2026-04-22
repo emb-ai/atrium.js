@@ -19,8 +19,16 @@ export function initKeybindings(actions) {
       case 'p': e.preventDefault(); actions.color();      break;
       case 's': e.preventDefault(); actions.slideshow();  break;
       case 'b': e.preventDefault(); actions.whiteboard(); break;
-      case 'arrowright': actions.next(); break;
-      case 'arrowleft':  actions.prev(); break;
+      case 'arrowright':
+      case 'pagedown':
+        actions.next();
+        break;
+      case 'arrowleft':
+      case 'pageup':
+        actions.prev();
+        break;
+      case 'home': actions.first(); break;
+      case 'end':  actions.last();  break;
       case '+':
       case '=':
         e.preventDefault();
