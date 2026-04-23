@@ -288,6 +288,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     tmp.style.pointerEvents = 'none';
     el.style.cursor = 'default';
     markSlidesReady();
+    // S closes the slideshow from this side too; the speaker's poll loop
+    // picks up the close and clears its own slideshow state.
+    document.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 's') { e.preventDefault(); window.close(); }
+    });
     return;
   }
 

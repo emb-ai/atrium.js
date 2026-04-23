@@ -1,8 +1,8 @@
 # atrium.js
 
 A minimal, keyboard-driven slide deck with a live annotation layer — built for
-lecturers who want to scribble on their slides in real time and mirror the
-result to a second window for the audience.
+lecturers who want to scribble on their slides in real time and project the
+result to a slideshow window for the audience.
 
 ## Idea
 
@@ -12,11 +12,11 @@ stroke is stored per-slide in coordinates normalized to the SVG's viewBox, so
 annotations stick to the content under resize and across windows of different
 sizes.
 
-A second "slideshow" window can be opened in the same browser; it mirrors the
+A slideshow window can be opened in the same browser; it shows the
 current slide, all saved strokes, the in-progress stroke, and any embedded
-video playback. The speaker window keeps a speaker-notes sidebar that is
-hidden in the mirror, and can be "frozen" so the audience doesn't see
-in-progress edits.
+video playback, all driven by the speaker window. The speaker window keeps
+a speaker-notes sidebar that is hidden in the slideshow window, and can be
+"frozen" so the audience doesn't see in-progress edits.
 
 Every keyboard shortcut is also exposed as a button on an auto-hiding
 toolbar at the bottom of the speaker window, so features are discoverable
@@ -51,9 +51,9 @@ with the slideshow window.
 | `D`            | Toggle drawing mode                          |
 | `B`            | Toggle whiteboard mode (blank pages)         |
 | `L`            | Toggle laser pointer (short-living trace)    |
-| `S`            | Open / close the slideshow (mirror) window   |
-| `F`            | Freeze the slideshow mirror at current state |
-| `P`            | Toggle color and size picker (drawing)                |
+| `S`            | Toggle speaker mode                          |
+| `F`            | Freeze the slideshow window at current state |
+| `P`            | Toggle color and size picker (drawing)       |
 | `+` / `-`      | Increase / decrease stroke size              |
 | `Ctrl+Z`       | Undo last stroke on current slide            |
 | Left mouse     | Draw                                         |
@@ -63,7 +63,7 @@ with the slideshow window.
 
 Press `B` to hide the current slide deck and switch to a stack of blank
 white pages, sized and letterboxed the same as a slide. Drawing, the color
-picker, the laser pointer, undo, and the slideshow mirror all work as
+picker, the laser pointer, undo, and the slideshow window all work as
 usual — strokes are just stored against the whiteboard page instead of the
 underlying slide.
 
@@ -88,5 +88,4 @@ npx http-server .
 caddy file-server --listen :8000
 ```
 
-Then open <http://localhost:8000/> and press `S` to pop out the slideshow
-window onto your second display.
+Then open <http://localhost:8000/>.
