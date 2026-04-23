@@ -98,13 +98,13 @@ async function sourcesFromSvgs(files) {
   return svgs.map((file, i) => ({ name: file.name, svgText: texts[i] }));
 }
 
-// pdf.js is loaded on demand from vendor/ so the app stays dependency-free for
-// the common SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE
-// (relative to PDF's native 72dpi) then embedded as a PNG inside a tiny SVG
-// wrapper whose viewBox matches the page's PDF units — that's what
-// getReferenceBox() keys off for stroke normalization. Higher scale = crisper
-// on large displays at the cost of upfront render time and broadcast payload.
-const PDFJS_BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
+// pdf.js is loaded on demand so the app stays dependency-free for the common
+// SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE (relative to
+// PDF's native 72dpi) then embedded as a PNG inside a tiny SVG wrapper whose
+// viewBox matches the page's PDF units — that's what getReferenceBox() keys
+// off for stroke normalization. Higher scale = crisper on large displays at
+// the cost of upfront render time and broadcast payload.
+const PDFJS_BASE = new URL('./pdfjs/', import.meta.url).href;
 const PDF_RENDER_SCALE = 6;
 let pdfjsPromise = null;
 function loadPdfJs() {

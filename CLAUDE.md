@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **atrium.js** — a static HTML/CSS/JS slide deck with a transparent drawing
 canvas on top, plus a mirrored "slideshow" window the speaker drives from
 the main "speaker" window. No build step, no runtime npm deps (pdf.js is
-vendored at `vendor/pdfjs/` and loaded on demand). Entry point is
-`index.html` → `src/main.js`, which wires together focused ES modules
-under `src/`: the state bus (`state.js`), canvas helpers (`canvas.js`),
+vendored at `js/pdfjs/` and loaded on demand). Entry point is
+`index.html` → `js/main.js`, which wires together focused ES modules
+under `js/`: the state bus (`state.js`), canvas helpers (`canvas.js`),
 geometry (`geometry.js`), deck lifecycle (`slides.js`), drawing
 (`drawing/input.js`, `drawing/renderer.js`, `drawing/laser.js`), window
 sync (`sync/speaker.js`, `sync/video.js`), and UI (`ui/toolbar.js`,
@@ -43,8 +43,8 @@ multi-selection of SVG files (sorted with numeric-aware filename
 order) or a single PDF — see *PDF decks* below.
 
 ### PDF decks
-When the user picks a PDF, `src/slides.js` imports pdf.js from
-`vendor/pdfjs/` on demand, rasterizes each page to a canvas at
+When the user picks a PDF, `js/slides.js` imports pdf.js from
+`js/pdfjs/` on demand, rasterizes each page to a canvas at
 `PDF_RENDER_SCALE` (multiplier over PDF's native 72dpi), and embeds
 the PNG in a minimal `<svg>` wrapper whose `viewBox` matches the
 page's PDF units. The rest of the SVG pipeline — normalization,
@@ -69,7 +69,7 @@ viewBox**, not in screen pixels. The pipeline:
    `slidesData[currentSlide]` or `whiteboardSlides[whiteboardCurrent]`)
    and re-projects every stroke on each resize / slide change.
 4. Drawing is clipped to the reference box via `clipToRect()` (from
-   `src/canvas.js`), so strokes can't bleed into the letterbox margin
+   `js/canvas.js`), so strokes can't bleed into the letterbox margin
    even if the pointer wanders outside.
 
 This is what makes annotations stick to SVG content across resizes
@@ -86,10 +86,10 @@ as the laser pointer overlay (the two modes are mutually exclusive).
 mouseup.
 
 ### Interaction modes (mutually exclusive)
-One of three values held in `mode` (in `src/state.js`): `'draw'`,
+One of three values held in `mode` (in `js/state.js`): `'draw'`,
 `'laser'`, `'cursor'`. Changed only via `setMode()`, which emits a
-`'mode'` event; `src/main.js` owns the body-class/laser-loop/toolbar
-side-effects, and `src/drawing/input.js` owns the cursor-class and
+`'mode'` event; `js/main.js` owns the body-class/laser-loop/toolbar
+side-effects, and `js/drawing/input.js` owns the cursor-class and
 color-picker close — each module subscribes from its own init.
 
 - **Draw** (`D`) — pencil cursor, left-click draws, right-click erases.
@@ -184,7 +184,7 @@ mode.
 ### Help overlay
 `#help-overlay` is a keybinding cheatsheet toggled with `?` (or by
 clicking the backdrop). Speaker window only — CSS hides it in the
-slideshow window, so `src/ui/help.js` has no role guard.
+slideshow window, so `js/ui/help.js` has no role guard.
 
 ### Progress indicator
 `#progress-indicator` is anchored to the bottom-right of the reference
