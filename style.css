@@ -306,6 +306,7 @@ body.notes-collapsed #notes-panel {
   pointer-events: none;
   opacity: 0;
   z-index: 10;
+  white-space: nowrap;
   transition: opacity 180ms ease-out, transform 180ms ease-out;
 }
 
