@@ -97,12 +97,13 @@ export function isCursorMode() { return mode === MODE_CURSOR; }
 // Canvas pointer events are on for both draw and laser; only cursor disables.
 export function isPointerCaptureOn() { return mode !== MODE_CURSOR; }
 
-// Toggles between a specific mode and the neutral cursor mode (draw/laser),
-// or between cursor and draw (cursor toggle). 'mode' subscribers fan out the
-// DOM/cursor/broadcast/toolbar side-effects.
+// Toggles between a specific mode and the neutral cursor mode (draw/laser).
+// Cursor is the neutral resting state, so pressing its toggle while already
+// there is a no-op. 'mode' subscribers fan out the DOM/cursor/broadcast/
+// toolbar side-effects.
 export function toggleDraw()   { setMode(isDrawMode()   ? MODE_CURSOR : MODE_DRAW);   }
 export function toggleLaser()  { setMode(isLaserMode()  ? MODE_CURSOR : MODE_LASER);  }
-export function toggleCursor() { setMode(isCursorMode() ? MODE_DRAW   : MODE_CURSOR); }
+export function toggleCursor() { if (!isCursorMode()) setMode(MODE_CURSOR); }
 
 // ─── Pen style ────────────────────────────────────────────────────────────────
 // Defaults mirror the values the color picker would pick on first open. They
