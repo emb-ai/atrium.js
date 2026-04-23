@@ -9,21 +9,18 @@ A presentation tool that runs in a browser. Key features:
 - Simple usage via static serving
 - 100\% vibe coded
 
+## [Demo](https://emb-ai.github.io/atrium.js/)
+
+
 ## Usage
-### Demo
 
-
-### Serving
-
-Serve repository content with any HTTP server that supports `Range` requests
-(needed for embedded videos to seek correctly). Simple server included:
+Serve repository content statically with any HTTP server or service.
+To seek in embedded videos it should also supports `Range` requests.
+Simple server included. Run it and open <http://localhost:8000/>.
 
 ```sh
 ./serve.py
 ```
-Then open <http://localhost:8000/>.
-
-### Self-contained web page
 
 List SVGs in `index.html`, or load them at runtime via the toolbar (a
 multi-selection of SVGs, or a single PDF):
@@ -38,10 +35,10 @@ multi-selection of SVGs, or a single PDF):
 - `data-src` — path to the SVG.
 - `data-notes` — optional speaker notes (use `&#10;` for newlines).
 
-Embedded `<video>` elements inside the SVGs are supported and kept in
-sync with the slideshow window.
+Embedded `<video>` elements inside SVG `foreignObject` are supported and kept
+in sync with the slideshow window.
 
-### Keyboard
+## Keybindings
 
 | Group        | Key              | Action                                                |
 | ------------ | ---------------- | ------------------------------------------------------|
