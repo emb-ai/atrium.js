@@ -13,7 +13,10 @@
          runtime via the toolbar "Load deck" button (SVGs or PDF). An empty
          container is fine — the app starts in a no-slides state and the
          user loads a deck when ready. Whiteboard mode (B) works regardless. -->
-    <div id="slides"></div>
+    <div id="slides">
+        <div class="slide" data-src="slides/test-1.svg" data-notes="Welcome to atrium.js!&#10;This is a lightweight presentation tool"></div>
+        <div class="slide" data-src="slides/test-2.svg"></div>
+    </div>
 
     <!-- Whiteboard page: a blank "slide" shown only in whiteboard mode.
          Positioned from JS to match getReferenceBox() so it lines up exactly
