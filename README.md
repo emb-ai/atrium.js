@@ -1,33 +1,32 @@
 # atrium.js
 
-A minimal, keyboard-driven slide deck with a live annotation layer — built for
-lecturers who want to scribble on their slides in real time and project the
-result to a slideshow window for the audience.
+A presentation tool that runs in a browser. Key features:
 
-## Idea
-
-Slides are plain SVG files. A transparent `<canvas>` sits on top of them, and
-the speaker draws freehand strokes with the mouse (or a stylus). Each
-stroke is stored per-slide in coordinates normalized to the SVG's viewBox, so
-annotations stick to the content under resize and across windows of different
-sizes.
-
-A slideshow window can be opened in the same browser; it shows the
-current slide, all saved strokes, the in-progress stroke, and any embedded
-video playback, all driven by the speaker window. The speaker window keeps
-a speaker-notes sidebar that is hidden in the slideshow window, and can be
-"frozen" so the audience doesn't see in-progress edits.
-
-Every keyboard shortcut is also exposed as a button on an auto-hiding
-toolbar at the bottom of the speaker window, so features are discoverable
-without consulting a cheat sheet.
+- Supports loading slides as a PDF or a bunch of SVGs
+- Tools: freehand drawing, laser pointer
+- Speaker mode with notes, next slide preview and synced second window for slideshow
+- Whiteboard mode with its own stack of blank pages
+- Simple usage via static serving
+- 100\% vibe coded
 
 ## Usage
+### Demo
 
-### Slides
 
-Put SVG files somewhere reachable (e.g. `slides/`) and list them in
-`index.html`:
+### Serving
+
+Serve repository content with any HTTP server that supports `Range` requests
+(needed for embedded videos to seek correctly). Simple server included:
+
+```sh
+./serve.py
+```
+Then open <http://localhost:8000/>.
+
+### Self-contained web page
+
+List SVGs in `index.html`, or load them at runtime via the toolbar (a
+multi-selection of SVGs, or a single PDF):
 
 ```html
 <div id="slides">
@@ -39,53 +38,26 @@ Put SVG files somewhere reachable (e.g. `slides/`) and list them in
 - `data-src` — path to the SVG.
 - `data-notes` — optional speaker notes (use `&#10;` for newlines).
 
-Embedded `<video>` elements inside the SVGs are supported and kept in sync
-with the slideshow window.
+Embedded `<video>` elements inside the SVGs are supported and kept in
+sync with the slideshow window.
 
 ### Keyboard
 
-| Key            | Action                                       |
-| -------------- | -------------------------------------------- |
-| `←` / `→`      | Previous / next slide                        |
-| `C`            | Toggle mouse (cursor) mode                   |
-| `D`            | Toggle drawing mode                          |
-| `B`            | Toggle whiteboard mode (blank pages)         |
-| `L`            | Toggle laser pointer (short-living trace)    |
-| `S`            | Toggle speaker mode                          |
-| `F`            | Freeze the slideshow window at current state |
-| `P`            | Toggle color and size picker (drawing)       |
-| `+` / `-`      | Increase / decrease stroke size              |
-| `Ctrl+Z`       | Undo last stroke on current slide            |
-| Left mouse     | Draw                                         |
-| Right mouse    | Erase nearest stroke                         |
-
-### Whiteboard mode
-
-Press `B` to hide the current slide deck and switch to a stack of blank
-white pages, sized and letterboxed the same as a slide. Drawing, the color
-picker, the laser pointer, undo, and the slideshow window all work as
-usual — strokes are just stored against the whiteboard page instead of the
-underlying slide.
-
-- `←` / `→` navigate between whiteboard pages.
-- You start on page 1. Pressing `→` from the last page appends a new blank
-  page, but only if the current page has something drawn on it — so empty
-  pages don't pile up.
-- Press `B` again to return to the slide deck. Whiteboard strokes persist
-  for the session; so do your slide annotations.
-
-## Running locally
-
-The app is pure static HTML/CSS/JS — no build, no dependencies. Serve this
-directory with any local HTTP server that supports `Range` requests (needed
-for embedded videos to seek correctly). A tiny Python server is included:
-
-```sh
-./serve.py
-# or
-npx http-server .
-# or
-caddy file-server --listen :8000
-```
-
-Then open <http://localhost:8000/>.
+| Group        | Key              | Action                                                |
+| ------------ | ---------------- | ------------------------------------------------------|
+| Navigation   | `←` / `PgUp`     | Previous slide                                        |
+|              | `→` / `PgDn`     | Next slide                                            |
+|              | `Home`           | First slide                                           |
+|              | `End`            | Last slide                                            |
+| Presentation | `S`              | Toggle speaker mode                                   |
+|              | `F`              | Freeze the slideshow window at current slide          |
+|              | `B`              | Toggle whiteboard (blank pages)<br>add new page with `→` when current page is non-empty|
+|              | `?`              | Toggle keyboard shortcuts cheatsheet                  |
+| Tools        | `D`              | Draw                                                  |
+|              | `L`              | Laser pointer (short-living trace)                    |
+|              | `C`              | Cursor                                                |
+| Drawing      | Left mouse       | Draw                                                  |
+|              | Right mouse      | Erase nearest stroke                                  |
+|              | `P`              | Color & size picker                                   |
+|              | `+` / `-`        | Stroke size                                           |
+|              | `Ctrl+Z`         | Undo last stroke on current slide                     |
