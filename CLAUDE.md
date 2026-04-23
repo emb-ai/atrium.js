@@ -215,10 +215,10 @@ exited programmatically).
   stroke carries its own `color` and `width` so later tweaks only
   affect new strokes. A transient `#size-dot` previews the current
   brush at the cursor after a size change.
-- Cursor images (`pencil.svg`, `eraser.svg`) are referenced from
-  `style.css` with fixed hotspots — keep filenames stable.
-  `cursor.svg` is a toolbar icon (not a cursor), shown on the cursor-
-  mode button.
+- Cursor images (`assets/pencil.svg`, `assets/eraser.svg`) are
+  referenced from `style.css` with fixed hotspots — keep filenames
+  stable. `assets/cursor.svg` is a toolbar icon (not a cursor),
+  shown on the cursor-mode button.
 - DPR handling: canvases are sized `cssWidth * dpr` with
   `ctx.scale(dpr, dpr)` so all drawing code works in CSS pixels.
 - There is no persistence — strokes (both slide and whiteboard) and

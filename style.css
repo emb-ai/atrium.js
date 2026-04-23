@@ -104,11 +104,11 @@ canvas {
 
 /* Cursor states applied on #c based on interaction mode */
 #c.cursor-pencil {
-  cursor: url("./pencil.svg") 8 21, auto;
+  cursor: url("./assets/pencil.svg") 8 21, auto;
 }
 
 #c.cursor-eraser {
-  cursor: url("./eraser.svg") 9 22, auto;
+  cursor: url("./assets/eraser.svg") 9 22, auto;
 }
 
 /* Laser mode: hide the native cursor — the bright red head dot drawn on
