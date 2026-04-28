@@ -580,9 +580,8 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
 /* ─── Speaker toolbar (speaker window only) ─────────────────────────────────── */
 #toolbar {
   position: absolute;
-  left: 50%;
+  left: 18px;
   bottom: 18px;
-  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -597,7 +596,7 @@ body.color-picker-open:not(.is-slideshow) #color-picker {
 
 #toolbar.tb-hidden {
   opacity: 0;
-  transform: translate(-50%, 12px);
+  transform: translateY(12px);
 }
 
 /* opacity:0 elements are still hit-testable — disable clicks while hidden. */
