@@ -71,7 +71,7 @@ export function resetPointerState() {
 export function finalizeDrawing() {
   if (!isDrawing) return;
   const target = getActiveStrokes();
-  if (target && currentPoints.length > 1) {
+  if (target && currentPoints.length) {
     const refBox = cfg.getRefBox();
     const normalized = currentPoints.map(p => normalizePoint(p, refBox));
     target.push({ points: normalized, width: lineWidth, color: strokeColor });

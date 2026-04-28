@@ -36,8 +36,16 @@ export function syncPenStyles() {
 // are the raw samples and whose endpoints are midpoints between
 // consecutive samples. Degenerate for <2 points.
 export function drawStroke(context, pts) {
-  if (pts.length < 2) return;
+  if (!pts.length) return;
   context.beginPath();
+
+  if (pts.length === 1) {
+    const r = context.lineWidth / 2;
+    context.arc(pts[0].x, pts[0].y, r, 0, Math.PI * 2);
+    context.fillStyle = context.strokeStyle;
+    context.fill();
+    return;
+  }
 
   if (pts.length === 2) {
     context.moveTo(pts[0].x, pts[0].y);
@@ -96,7 +104,7 @@ export function redrawAll({ refBox, strokes, liveStroke }) {
     drawStroke(ctx, toScreenPoints(stroke.points, refBox));
   });
 
-  if (liveStroke && liveStroke.points.length > 1) {
+  if (liveStroke && liveStroke.points.length) {
     ctx.lineWidth = liveStroke.width;
     ctx.strokeStyle = liveStroke.color || DEFAULT_STROKE_COLOR;
     drawStroke(ctx, toScreenPoints(liveStroke.points, refBox));
