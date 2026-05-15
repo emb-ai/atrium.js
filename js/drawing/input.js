@@ -36,10 +36,11 @@ export function initInput(config) {
   if (cfg.isSlideshow) return;
 
   on('mode', onModeChanged);
-  el.addEventListener('mousedown',   onMouseDown);
+  el.addEventListener('pointerdown', onPointerDown);
   el.addEventListener('pointermove', onPointerMove);
+  el.addEventListener('pointerup',   onPointerUp);
+  el.addEventListener('pointercancel', onPointerUp);
   el.addEventListener('contextmenu', e => e.preventDefault());
-  window.addEventListener('mouseup', onMouseUp);
 }
 
 export function isBusy() {
@@ -127,7 +128,10 @@ function tryDeleteClosest(pos) {
   }
 }
 
-function onMouseDown(e) {
+function onPointerDown(e) {
+  // Ignore touch contacts (e.g. palm on Wacom tablets with touch) so they
+  // don't race the pen's pointer stream.
+  if (e.pointerType === 'touch') return;
   // Only draw mode consumes clicks — cursor mode disables pointer capture,
   // laser ignores clicks and follows the pointer directly.
   if (!isDrawMode()) return;
@@ -148,10 +152,15 @@ function onMouseDown(e) {
     isDrawing = true;
     currentPoints = [pos];
   }
+  // Capture the pointer so we get a consistent stream of pointermove /
+  // pointerup from this one device — critical on Wacom, where synthesized
+  // mouse events would otherwise interleave with the pen's pointer events.
+  el.setPointerCapture(e.pointerId);
   closeColorPicker();
 }
 
 function onPointerMove(e) {
+  if (e.pointerType === 'touch') return;
   cursorPos = getPos(e);
   if (!isPointerCaptureOn()) return;
   const inside = isInsideRefBox(cursorPos);
@@ -174,11 +183,15 @@ function onPointerMove(e) {
   }
 }
 
-function onMouseUp() {
+function onPointerUp(e) {
+  if (e.pointerType === 'touch') return;
   if (!isDrawMode()) return;
   finalizeDrawing();
   if (isErasing) {
     isErasing = false;
     updateCursor();
+  }
+  if (el.hasPointerCapture?.(e.pointerId)) {
+    el.releasePointerCapture(e.pointerId);
   }
 }
