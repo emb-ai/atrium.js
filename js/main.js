@@ -126,6 +126,9 @@ const DEFAULT_WHITEBOARD_ASPECT = 16 / 9;
 // With no active slide we fall back to a fixed aspect so the whiteboard
 // page keeps its proportions across resizes and between the speaker /
 // slideshow windows.
+// WARNING: adding a new slide source type (PNG, video page, etc.) requires
+// extending this fn so it returns the source's intrinsic box — otherwise
+// stroke normalization drifts across resizes and the slideshow window.
 function getReferenceBox() {
   const svg = getSlides()[currentSlide]?.querySelector('svg') || null;
   return computeReferenceBox(svg, getCanvasCssSize(), DEFAULT_WHITEBOARD_ASPECT);
@@ -216,6 +219,9 @@ on('whiteboard', updateWhiteboardBodyClass);
 
 on('style', syncPenStyles);
 
+// 'mode' has split ownership: this module owns body-class/laser-loop/toolbar;
+// input.js owns cursor-class + color-picker close. Don't merge — each module
+// subscribes from its own init so handlers stay local to their concerns.
 on('mode', onModeChanged);
 
 // ─── Events & Initialization ─────────────────────────────────────────────────

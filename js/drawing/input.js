@@ -35,6 +35,8 @@ export function initInput(config) {
   cfg = config;
   if (cfg.isSlideshow) return;
 
+  // Counterpart subscription lives in main.js (body-class/laser/toolbar).
+  // Keep them split — see main.js for rationale.
   on('mode', onModeChanged);
   el.addEventListener('pointerdown', onPointerDown);
   el.addEventListener('pointermove', onPointerMove);
@@ -75,6 +77,8 @@ export function finalizeDrawing() {
   if (target && currentPoints.length) {
     const refBox = cfg.getRefBox();
     const normalized = currentPoints.map(p => normalizePoint(p, refBox));
+    // Snapshot current color + width onto the stroke — later toolbar tweaks
+    // only affect NEW strokes, never the ones already drawn.
     target.push({ points: normalized, width: lineWidth, color: strokeColor });
   }
   isDrawing = false;

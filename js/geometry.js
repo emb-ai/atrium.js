@@ -65,6 +65,8 @@ function letterbox(aspect, { width, height }) {
   return { x: (width - w) / 2, y: (height - h) / 2, width: w, height: h };
 }
 
+// viewBox-relative [0,1] space — strokes reproject under any refBox,
+// so annotations survive resizes and cross-window size mismatch.
 export function normalizePoint(point, refBox) {
   return {
     x: refBox.width > 0 ? (point.x - refBox.x) / refBox.width : 0,

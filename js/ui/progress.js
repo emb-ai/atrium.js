@@ -27,7 +27,8 @@ export function updateProgressIndicator({ refBox, current, total }) {
 }
 
 // Position the blank whiteboard "page" to exactly cover the refBox, so it
-// letterboxes identically to the underlying slide it replaces.
+// letterboxes identically to the underlying slide it replaces. Must be done
+// in JS each redraw — CSS can't replicate SVG `preserveAspectRatio`.
 export function updateWhiteboardPagePosition(refBox) {
   whiteboardPageEl.style.left   = refBox.x + 'px';
   whiteboardPageEl.style.top    = refBox.y + 'px';

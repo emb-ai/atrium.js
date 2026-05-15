@@ -9,6 +9,9 @@
 // Imported bindings are live: `import { currentSlide } from './state.js'`
 // gives a read-only view that tracks updates made by setters in this module.
 // External code cannot reassign these — it must call the matching setter.
+//
+// All state here is session-only — strokes and runtime-loaded decks are
+// never persisted across reloads.
 
 // ─── Event bus ────────────────────────────────────────────────────────────────
 const listeners = new Map();
