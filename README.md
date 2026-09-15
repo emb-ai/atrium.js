@@ -48,6 +48,7 @@ in sync with the slideshow window.
 |              | `End`            | Last slide                                            |
 | Presentation | `S`              | Toggle speaker mode                                   |
 |              | `F`              | Freeze the slideshow window at current slide          |
+|              | `N`              | Toggle slide numbers in speaker mode                  |
 |              | `B`              | Toggle whiteboard (blank pages)<br>add new page with `→` when current page is non-empty|
 |              | `?`              | Toggle keyboard shortcuts cheatsheet                  |
 | Tools        | `D`              | Draw                                                  |

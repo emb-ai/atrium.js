@@ -26,6 +26,12 @@ export function updateProgressIndicator({ refBox, current, total }) {
   progressIndicator.style.top  = (refBox.y + refBox.height - PROGRESS_INSET) + 'px';
 }
 
+// Indicator is hidden by default in speaker mode; CSS shows it only while
+// body has .show-slide-numbers.
+export function toggleSlideNumbers() {
+  document.body.classList.toggle('show-slide-numbers');
+}
+
 // Position the blank whiteboard "page" to exactly cover the refBox, so it
 // letterboxes identically to the underlying slide it replaces. Must be done
 // in JS each redraw — CSS can't replicate SVG `preserveAspectRatio`.

@@ -411,8 +411,9 @@ body.is-loading #loading-indicator {
   transform: translate(-100%, -100%);
 }
 
-body:not(.is-slideshow).speaker-mode #progress-indicator,
-body:not(.is-slideshow).whiteboard-mode #progress-indicator {
+/* Hidden by default in speaker mode; N toggles .show-slide-numbers. */
+body:not(.is-slideshow).speaker-mode.show-slide-numbers #progress-indicator,
+body:not(.is-slideshow):not(.speaker-mode).whiteboard-mode #progress-indicator {
   display: inline-flex;
 }
 

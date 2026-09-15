@@ -12,6 +12,7 @@ import {
 import {
   updateProgressIndicator,
   updateWhiteboardPagePosition,
+  toggleSlideNumbers,
 } from './ui/progress.js';
 import {
   initLaser,
@@ -335,6 +336,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     whiteboard: toggleWhiteboard,
     slideshow:  toggleSpeakerMode,
     freeze:     toggleFreeze,
+    slideNumbers: toggleSlideNumbers,
     fullscreen: toggleFullscreen,
     loadDeck:   pickDeck,
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(+1); },
