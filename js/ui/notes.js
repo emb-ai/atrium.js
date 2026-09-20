@@ -19,9 +19,33 @@ const notesResizer    = document.getElementById('notes-resizer');
 const nextPreview     = document.getElementById('next-preview');
 const nextPreviewThumb = document.getElementById('next-preview-thumb');
 
-const slideNotes = Array.from(document.querySelectorAll('.slide')).map(
-  s => s.dataset.notes || '',
-);
+// Re-read on every deck change: a new deck replaces the .slide divs, so the
+// notes captured for the previous one are stale. Decks built from a PDF carry
+// no data-notes at all, which is what drives the `no-notes` body class below.
+let slideNotes = readSlideNotes();
+
+function readSlideNotes() {
+  return Array.from(document.querySelectorAll('.slide')).map(
+    s => s.dataset.notes || '',
+  );
+}
+
+// The notes bar (and its drag handle) is pointless for a deck without a single
+// note, so speaker mode suppresses it entirely via this class.
+function syncNotesAvailability() {
+  document.body.classList.toggle(
+    'no-notes',
+    !slideNotes.some(n => n.trim()),
+  );
+}
+
+// Callers run inside a deck change, which resizes the canvas afterwards
+// anyway, so this deliberately skips onVisibilityChange().
+export function reloadNotes() {
+  slideNotes = readSlideNotes();
+  syncNotesAvailability();
+  updateNotesContent();
+}
 
 // Show/hide changes the panel's presence in the flex layout, which shifts
 // the canvas's bounding box. The caller knows how to "refresh" the canvas
@@ -34,6 +58,7 @@ export function initNotes({ onVisibilityChange: cb } = {}) {
   on('whiteboard', updateNotesContent);
   if (notesResizer) wireResizer();
   wireNotesToggle();
+  syncNotesAvailability();
 }
 
 function wireNotesToggle() {

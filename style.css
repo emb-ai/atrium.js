@@ -252,6 +252,13 @@ body.notes-collapsed #notes-panel {
   display: none !important;
 }
 
+/* Deck without a single data-notes entry: nothing to show, so speaker mode
+   drops the bar and its drag handle and gives the width back to the canvas. */
+body.no-notes #notes-panel,
+body.no-notes #notes-resizer {
+  display: none !important;
+}
+
 #next-preview {
   margin-bottom: 14px;
 }

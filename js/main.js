@@ -27,7 +27,7 @@ import {
   buildColorPicker,
   toggleColorPicker,
 } from './ui/color-picker.js';
-import { initNotes, showNotes, hideNotes, updateNotesContent } from './ui/notes.js';
+import { initNotes, showNotes, hideNotes, reloadNotes } from './ui/notes.js';
 import { initHelp, toggleHelp } from './ui/help.js';
 import { initToolbar, syncToolbar, showToolbar, toggleToolbar } from './ui/toolbar.js';
 import {
@@ -262,13 +262,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   const onDeckChange = () => {
     updateActiveSlideClass();
     document.body.classList.toggle('no-deck', getSlides().length === 0);
+    // Before setupCanvas(): a deck with no notes hides the notes bar, which
+    // changes the canvas's bounding box.
+    reloadNotes();
     setupCanvas();
     initVideoSync({
       slides: getSlides(),
       isSlideshow: IS_SLIDESHOW,
       broadcast: postToSlideshow,
     });
-    updateNotesContent();
     syncToolbar();
   };
   initSlides({ onDeckChange });
