@@ -49,6 +49,9 @@ let currentDeckSources = null;
 // getMirroredLiveStroke() so the renderer can paint it alongside committed
 // strokes without a separate redraw path.
 let mirroredLiveStroke = null;
+// Slideshow-only: whether any `state` message has landed yet. Gates the
+// retry request in markSlidesReady().
+let receivedState = false;
 let cfg = null;
 
 if (IS_SLIDESHOW) document.body.classList.add('is-slideshow');
@@ -64,10 +67,20 @@ if (IS_SLIDESHOW) {
   if (Number.isFinite(slideParam) && slideParam >= 0) setCurrentSlide(slideParam);
 }
 
+// Subscribed at module load rather than from initSpeakerLink(): the slideshow
+// window doesn't reach initSpeakerLink() until preloadSlides() has resolved,
+// and anything the speaker sends in that gap would be dropped.
+// onChannelMessage parks messages arriving before markSlidesReady() in
+// pendingDeck / pendingState, so early delivery is safe.
+channel.addEventListener('message', onChannelMessage);
+
+// Ask for deck + state as early as possible so the speaker's reply — which
+// for a PDF deck is the slow part — travels while this window is still
+// booting, instead of starting only once it has finished.
+if (IS_SLIDESHOW) channel.postMessage({ type: 'request-state' });
+
 export function initSpeakerLink(config) {
   cfg = config;
-
-  channel.addEventListener('message', onChannelMessage);
 
   if (IS_SLIDESHOW) return;
 
@@ -113,10 +126,10 @@ export function markSlidesReady() {
     applySlideshowState(pendingState);
     pendingState = null;
   }
-  // Announce readiness so the speaker window can reply with current state
-  // — handles the case where this window opened after the speaker sent its
-  // most recent update.
-  channel.postMessage({ type: 'request-state' });
+  // The boot-time request above normally means state has already arrived and
+  // was applied from the queue. Re-ask only if it hasn't — covers a speaker
+  // that wasn't listening yet when this window sent its first request.
+  if (!receivedState) channel.postMessage({ type: 'request-state' });
 }
 
 export function broadcastState() {
@@ -225,6 +238,7 @@ function onChannelMessage(event) {
       }
       cfg?.onDeckReceived?.(msg.sources);
     } else if (msg.type === 'state') {
+      receivedState = true;
       // If slides are still loading, queue the message so the final
       // markSlidesReady() can apply it without racing preloadSlides.
       if (!slidesReady) {
