@@ -4,7 +4,9 @@
 // never called and all syncToolbar() pokes no-op against a null cfg.
 //
 // The bar auto-hides after HIDE_DELAY_MS and reappears when the mouse
-// enters the bottom REVEAL_ZONE_PX of the viewport. The container has
+// enters the bottom REVEAL_ZONE_PX of the viewport. `T` pins it out of
+// sight entirely: while pinned, hover and edge-reveal are ignored until
+// the user presses `T` again. The container has
 // pointer-events: none in CSS so dragging the pointer between buttons
 // passes through to the canvas (drawing/laser keep working); individual
 // buttons re-enable pointer events.
@@ -32,6 +34,8 @@ function isFullscreen() {
 
 let hideTimer = null;
 let hovered = false;
+// Toggled by `T` (toggleToolbar). Suppresses every auto-reveal path.
+let pinnedHidden = false;
 // Set by initToolbar(); all exported functions no-op until it's non-null,
 // so module-top `on(...)` subscribers are safe even before init runs.
 let cfg = null;
@@ -57,6 +61,7 @@ export function initToolbar(config) {
   });
 
   toolbarEl.addEventListener('mouseenter', () => {
+    if (pinnedHidden) return;
     hovered = true;
     clearTimeout(hideTimer);
     hideTimer = null;
@@ -129,9 +134,24 @@ export function syncToolbar() {
 
 export function showToolbar() {
   if (!toolbarEl || !cfg) return;
-  if (cfg.isBusy()) return;
+  if (cfg.isBusy() || pinnedHidden) return;
   toolbarEl.classList.remove('tb-hidden');
   scheduleHide();
+}
+
+// `T` handler: hide the bar for good, or bring it back and resume the
+// normal auto-hide cycle.
+export function toggleToolbar() {
+  if (!toolbarEl) return;
+  pinnedHidden = !pinnedHidden;
+  if (pinnedHidden) {
+    clearTimeout(hideTimer);
+    hideTimer = null;
+    hovered = false;
+    toolbarEl.classList.add('tb-hidden');
+  } else {
+    showToolbar();
+  }
 }
 
 function scheduleHide() {

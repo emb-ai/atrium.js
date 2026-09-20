@@ -24,6 +24,7 @@ export function initKeybindings(actions) {
       case 's': e.preventDefault(); actions.slideshow();  break;
       case 'b': e.preventDefault(); actions.whiteboard(); break;
       case 'n': e.preventDefault(); actions.slideNumbers(); break;
+      case 't': e.preventDefault(); actions.toolbar();    break;
       case 'arrowright':
       case 'pagedown':
         actions.next();

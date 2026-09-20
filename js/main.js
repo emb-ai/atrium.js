@@ -29,7 +29,7 @@ import {
 } from './ui/color-picker.js';
 import { initNotes, showNotes, hideNotes, updateNotesContent } from './ui/notes.js';
 import { initHelp, toggleHelp } from './ui/help.js';
-import { initToolbar, syncToolbar, showToolbar } from './ui/toolbar.js';
+import { initToolbar, syncToolbar, showToolbar, toggleToolbar } from './ui/toolbar.js';
 import {
   initSlides,
   getSlides,
@@ -359,6 +359,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     slideshow:  toggleSpeakerMode,
     freeze:     toggleFreeze,
     slideNumbers: toggleSlideNumbers,
+    toolbar:    toggleToolbar,
     fullscreen: toggleFullscreen,
     loadDeck:   pickDeck,
     sizeUp:     () => { if (isDrawMode()) changeStrokeSize(+1); },
