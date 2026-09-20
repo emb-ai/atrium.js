@@ -52,6 +52,10 @@ let mirroredLiveStroke = null;
 // Slideshow-only: whether any `state` message has landed yet. Gates the
 // retry request in markSlidesReady().
 let receivedState = false;
+// Speaker-side: physical pixel width of the screen the slideshow window sits
+// on, as reported by that window. null until one announces itself. PDF import
+// uses it to pick a rasterization resolution instead of always assuming 4K.
+let slideshowScreenWidthPx = null;
 let cfg = null;
 
 if (IS_SLIDESHOW) document.body.classList.add('is-slideshow');
@@ -77,7 +81,26 @@ channel.addEventListener('message', onChannelMessage);
 // Ask for deck + state as early as possible so the speaker's reply — which
 // for a PDF deck is the slow part — travels while this window is still
 // booting, instead of starting only once it has finished.
-if (IS_SLIDESHOW) channel.postMessage({ type: 'request-state' });
+// The viewport report goes first: it's what the speaker sizes a PDF import
+// against, and a deck imported before it lands is stuck at the 4K default.
+if (IS_SLIDESHOW) {
+  reportViewport();
+  channel.postMessage({ type: 'request-state' });
+  // Moving the window to another monitor changes both of these, and the
+  // resolution only matters for decks imported from here on.
+  window.addEventListener('resize', reportViewport);
+}
+
+function reportViewport() {
+  channel.postMessage({
+    type: 'viewport',
+    screenWidthPx: Math.round(screen.width * devicePixelRatio),
+  });
+}
+
+export function getSlideshowScreenWidthPx() {
+  return slideshowScreenWidthPx;
+}
 
 export function initSpeakerLink(config) {
   cfg = config;
@@ -216,6 +239,9 @@ export function toggleFreeze() {
 
 function closeSlideshow() {
   slideshowWin = null;
+  // Forget the audience resolution: a later import shouldn't be sized for a
+  // screen that's no longer attached.
+  slideshowScreenWidthPx = null;
   frozen = false;
   syncFreezeIndicator();
   cfg?.onSlideshowClosed?.();
@@ -251,7 +277,11 @@ function onChannelMessage(event) {
       cfg?.onVideoSync?.(msg);
     }
   } else {
-    if (msg.type === 'request-state') {
+    if (msg.type === 'viewport') {
+      if (Number.isFinite(msg.screenWidthPx) && msg.screenWidthPx > 0) {
+        slideshowScreenWidthPx = msg.screenWidthPx;
+      }
+    } else if (msg.type === 'request-state') {
       // Deck before state so the slideshow rebuilds its #slides container
       // before applying the stroke arrays sized to the new slide count.
       if (currentDeckSources) channel.postMessage({ type: 'deck', sources: currentDeckSources });
