@@ -92,8 +92,7 @@ async function loadDeckFromFiles(files) {
     // Fresh speaker-side deck load starts at page 1. The slideshow side skips
     // this reset — the `state` message that follows the `deck` message is
     // authoritative, and resetting here would briefly flash slide 0 before
-    // the speaker's actual current slide is applied (notably for PDF decks,
-    // where the slideshow boots with an empty #slides container).
+    // the speaker's actual current slide is applied.
     setCurrentSlide(0);
   } finally {
     hideLoading();
@@ -111,10 +110,10 @@ async function sourcesFromSvgs(files) {
 
 // pdf.js is loaded on demand so the app stays dependency-free for the common
 // SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE (relative to
-// PDF's native 72dpi) then embedded as a PNG inside a tiny SVG wrapper whose
-// viewBox matches the page's PDF units — that's what getReferenceBox() keys
-// off for stroke normalization. Higher scale = crisper on large displays at
-// the cost of upfront render time and broadcast payload.
+// PDF's native 72dpi), kept as a PNG Blob, and wrapped at display time in a
+// tiny SVG whose viewBox matches the page's PDF units — that's what
+// getReferenceBox() keys off for stroke normalization. Higher scale = crisper
+// on large displays at the cost of upfront render time and broadcast payload.
 const PDFJS_BASE = new URL('./pdfjs/', import.meta.url).href;
 const PDF_RENDER_SCALE = 6;
 let pdfjsPromise = null;
@@ -148,17 +147,47 @@ async function sourcesFromPdf(file) {
     canvas.height = Math.ceil(viewport.height);
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport }).promise;
-    const png = canvas.toDataURL('image/png');
-    const w = page.view[2] - page.view[0];
-    const h = page.view[3] - page.view[1];
-    const svgText =
-      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
-      `viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">` +
-      `<image href="${png}" xlink:href="${png}" width="${w}" height="${h}"/>` +
-      `</svg>`;
-    sources.push({ name: `${file.name}#${i}`, svgText });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) {
+      console.error(`Failed to rasterize PDF page ${i}`);
+      continue;
+    }
+    sources.push({
+      name: `${file.name}#${i}`,
+      imageBlob: blob,
+      width: page.view[2] - page.view[0],
+      height: page.view[3] - page.view[1],
+    });
   }
   return sources;
+}
+
+// Object URLs minted for the deck currently in the DOM. Revoked on the next
+// rebuild, once the nodes referencing them have been discarded.
+let deckObjectUrls = [];
+
+function releaseDeckObjectUrls() {
+  deckObjectUrls.forEach(url => URL.revokeObjectURL(url));
+  deckObjectUrls = [];
+}
+
+// A source carries either raw SVG text (SVG and HTML decks) or a rasterized
+// page image (PDF decks). Page images travel as Blobs rather than base64 data
+// URLs on purpose: a Blob structured-clones to the slideshow window as a
+// handle with no byte copy, and it keeps this SVG wrapper small enough that
+// the DOMParser in injectSvg stays cheap. Inlining a multi-megabyte data URI
+// made both costs scale with deck size and froze the slideshow window for
+// seconds on every deck change.
+function svgTextForSource(src) {
+  if (src.svgText != null) return src.svgText;
+  const url = URL.createObjectURL(src.imageBlob);
+  deckObjectUrls.push(url);
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `viewBox="0 0 ${src.width} ${src.height}" preserveAspectRatio="xMidYMid meet">` +
+    `<image href="${url}" xlink:href="${url}" width="${src.width}" height="${src.height}"/>` +
+    `</svg>`
+  );
 }
 
 // Also used on the slideshow side when a 'deck' message arrives, so the
@@ -166,11 +195,12 @@ async function sourcesFromPdf(file) {
 export function rebuildSlidesFromSources(sources) {
   const container = document.getElementById('slides');
   container.innerHTML = '';
+  releaseDeckObjectUrls();
   sources.forEach(src => {
     const div = document.createElement('div');
     div.className = 'slide';
     div.dataset.src = src.name;
-    injectSvg(div, src.svgText);
+    injectSvg(div, svgTextForSource(src));
     container.appendChild(div);
   });
 
