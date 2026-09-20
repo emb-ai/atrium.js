@@ -4,6 +4,8 @@ A presentation tool that runs in a browser. Key features:
 
 - Supports loading slides as a PDF or a bunch of SVGs
 - Tools: freehand drawing, laser pointer
+- Speaker's pointer is mirrored into the slideshow window while a tool is
+  active (pencil/eraser, laser dot)
 - Speaker mode with notes, next slide preview and synced second window for slideshow
 - Whiteboard mode with its own stack of blank pages
 - Simple usage via static serving

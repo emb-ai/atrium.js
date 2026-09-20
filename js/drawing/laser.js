@@ -15,14 +15,22 @@
 import { tctx, getCanvasCssSize } from '../canvas.js';
 import { normalizePoint, denormalizePoint } from '../geometry.js';
 
-const LASER_STYLE = '#dc2626';
-const LASER_WIDTH = 10;
+// Exported so the mirrored-pointer glyph in cursor.js can match the head
+// dot exactly — the audience must not see two different red dots.
+export const LASER_STYLE = '#dc2626';
+export const LASER_WIDTH = 10;
 const LASER_TTL = 200;
 // EMA factor applied to incoming samples before they hit the trail.
 // Lower = smoother but laggier; 0.5 is a good balance.
 const LASER_SMOOTH_ALPHA = 0.5;
 
 let points = [];   // [{x, y, t}] — normalized coords + Date.now() timestamp
+// Sticky head position (normalized), speaker-side only: the trail expires
+// after LASER_TTL, so without this a laser held steady on one spot would
+// vanish mid-sentence. Never set on the slideshow, which stops its render
+// loop once the mirrored trail is gone and gets its persistent dot from
+// the pointer mirror instead (see cursor.js).
+let headPoint = null;
 let rafId = null;
 let config = null; // { getRefBox: () => rect, shouldContinue: () => bool }
 
@@ -43,8 +51,19 @@ export function setLaserPoints(arr) {
   points = Array.isArray(arr) ? arr : [];
 }
 
+// Trail only — the head is a pointer position, not a trail sample, so it
+// survives slide and whiteboard changes exactly like the pointer itself
+// does. Dropping it here would blank the speaker's dot on every arrow key
+// while the mirrored one stayed put.
 export function clearLaserPoints() {
   points = [];
+}
+
+// Drop the sticky dot without touching the trail, so it disappears the
+// instant laser mode ends (or the pointer leaves the window) while the
+// trail behind it still fades out naturally.
+export function clearLaserHead() {
+  headPoint = null;
 }
 
 // Prune first so a stale point doesn't act as the EMA reference when the
@@ -61,6 +80,7 @@ export function pushLaserPoint(pos, refBox) {
       }
     : n;
   points.push({ x: smoothed.x, y: smoothed.y, t: Date.now() });
+  headPoint = { x: smoothed.x, y: smoothed.y };
 }
 
 export function startLaserLoop() {
@@ -97,9 +117,11 @@ function renderLaserFrame() {
 
   // Head sits at the smoothed trail tip (not the raw cursor) so the dot
   // and the ribbon stay glued together — otherwise EMA smoothing leaves a
-  // visible gap between them during fast motion.
-  if (points.length > 0) {
-    drawLaserHead(tctx, denormalizePoint(points[points.length - 1], refBox), LASER_WIDTH);
+  // visible gap between them during fast motion. headPoint holds that same
+  // tip after the trail has aged out from under it.
+  const head = headPoint ?? points[points.length - 1] ?? null;
+  if (head) {
+    drawLaserHead(tctx, denormalizePoint(head, refBox), LASER_WIDTH);
   }
   tctx.restore();
 }

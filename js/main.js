@@ -2,6 +2,7 @@ import { computeReferenceBox } from './geometry.js';
 import {
   el,
   tmp,
+  ctx,
   getCanvasCssSize,
   setupCanvas as resizeCanvases,
 } from './canvas.js';
@@ -18,6 +19,7 @@ import {
   initLaser,
   getLaserPoints,
   clearLaserPoints,
+  clearLaserHead,
   startLaserLoop,
 } from './drawing/laser.js';
 import { changeStrokeSize } from './ui/stroke-size.js';
@@ -48,6 +50,11 @@ import {
   toggleFreeze,
   postToSlideshow,
 } from './sync/speaker.js';
+import {
+  initMirroredCursor,
+  getLocalCursorPoint,
+  drawMirroredCursor,
+} from './drawing/cursor.js';
 import {
   initInput,
   isBusy,
@@ -153,7 +160,12 @@ function redrawAll() {
     strokes: getStrokes() ?? [],
     liveStroke: getMirroredLiveStroke(),
   });
-  if (!IS_SLIDESHOW) {
+  // Painted on `ctx` rather than the `tmp` overlay: the laser loop clears
+  // tmp every frame, which would blink the cursor away while a trail from
+  // a just-left laser mode is still fading out.
+  if (IS_SLIDESHOW) {
+    drawMirroredCursor(ctx, refBox);
+  } else {
     const total = whiteboardMode ? whiteboardSlides.length : getSlides().length;
     updateProgressIndicator({
       refBox,
@@ -206,7 +218,10 @@ function syncModeDom() {
 
 function onModeChanged() {
   syncModeDom();
+  // The trail is left to fade out on its own (see above), but the sticky
+  // head must go at once — it has no timestamp to expire by.
   if (isLaserMode()) startLaserLoop();
+  else clearLaserHead();
   syncToolbar();
 }
 
@@ -261,6 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await preloadSlides();
   initSpeakerLink({
     getLiveStroke: getLiveStrokePoints,
+    getCursorPoint: getLocalCursorPoint,
     onStateApplied: redrawAll,
     onSlideshowOpened: () => { showNotes(); syncToolbar(); },
     onSlideshowClosed: () => { hideNotes(); syncToolbar(); },
@@ -274,6 +290,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     getRefBox: getReferenceBox,
     isFrozen,
     onLiveChange: broadcastState,
+  });
+  initMirroredCursor({
+    isSlideshow: IS_SLIDESHOW,
+    getRefBox: getReferenceBox,
+    onCursorMoved: broadcastState,
+    onImageReady: redrawAll,
   });
 
   const handleCanvasResize = () => {

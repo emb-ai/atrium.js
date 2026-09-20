@@ -49,6 +49,13 @@ export function isBusy() {
   return isDrawing || isErasing;
 }
 
+// Which draw-mode glyph the pointer is currently wearing. Read by the
+// mirrored cursor so the slideshow shows the eraser while the right button
+// is held, matching what the speaker sees.
+export function isErasingNow() {
+  return isErasing;
+}
+
 export function getCursorPos() {
   return cursorPos;
 }

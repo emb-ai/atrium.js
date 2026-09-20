@@ -79,6 +79,8 @@ export function pushWhiteboardPage() {
 //   'draw'   — left-click draws, right-click erases.
 //   'laser'  — red fading pointer trail.
 //   'cursor' — neutral; canvas transparent to pointer events (OS cursor shows).
+// In the two tool modes the pointer position is mirrored to the slideshow
+// window with a matching glyph; cursor mode is not — see drawing/cursor.js.
 // Draw and laser both require canvas pointer events; cursor disables them.
 export const MODE_DRAW   = 'draw';
 export const MODE_LASER  = 'laser';

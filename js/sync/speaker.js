@@ -5,7 +5,9 @@
 // Owns: window.open lifecycle, `frozen` (pauses outbound broadcasts so the
 // speaker can preview changes without leaking them to the audience), the
 // pendingState queue (messages arriving before slides render), and the
-// slideshow-only `mirroredLiveStroke` cache the renderer reads.
+// slideshow-only `mirroredLiveStroke` cache the renderer reads. The
+// equivalent cache for the mirrored pointer lives in drawing/cursor.js,
+// which owns both ends of that mirror.
 
 import {
   on,
@@ -18,6 +20,7 @@ import {
   whiteboardCurrent, setWhiteboardCurrent,
 } from '../state.js';
 import { getLaserPoints, setLaserPoints, startLaserLoop } from '../drawing/laser.js';
+import { setMirroredCursor } from '../drawing/cursor.js';
 
 const SLIDESHOW_CLOSED_POLL_MS = 500;
 
@@ -122,6 +125,7 @@ export function broadcastState() {
     liveStrokeWidth: lineWidth,
     liveStrokeColor: strokeColor,
     laserPoints: getLaserPoints(),
+    cursorPoint: cfg?.getCursorPoint?.() ?? null,
     whiteboardMode,
     whiteboardSlides,
     whiteboardCurrent,
@@ -241,6 +245,9 @@ function applySlideshowState(msg) {
   mirroredLiveStroke = msg.liveStroke
     ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor }
     : null;
+  // Same reasoning as mirroredLiveStroke: set before the state setters so
+  // the redraws they trigger already see the new pointer position.
+  setMirroredCursor(msg.cursorPoint);
 
   setCurrentSlide(msg.currentSlide);
   setSlidesData(msg.slidesData);
