@@ -5,7 +5,7 @@
 
 import { showLoading, updateLoading, hideLoading } from './ui/loading.js';
 import { setCurrentSlide, setSlidesData } from './state.js';
-import { broadcastDeck } from './sync/speaker.js';
+import { broadcastDeck, SLIDESHOW_AWAITS_DECK } from './sync/speaker.js';
 
 let slides = document.querySelectorAll('.slide');
 let afterDeckChange = () => {};
@@ -29,6 +29,17 @@ function injectSvg(slide, svgText) {
 }
 
 export async function preloadSlides() {
+  // A slideshow window whose speaker already has a deck starts empty rather
+  // than fetching index.html's demo slides: the deck message is moments away
+  // and the demo slides would be the only thing on screen until it lands.
+  if (SLIDESHOW_AWAITS_DECK) {
+    document.getElementById('slides').innerHTML = '';
+    slides = document.querySelectorAll('.slide');
+    setSlidesData([]);
+    afterDeckChange();
+    return;
+  }
+
   const fetchable = [...slides].filter(s => s.dataset.src);
   if (fetchable.length) showLoading('Loading deck');
   const promises = [...slides].map(async (slide, index) => {

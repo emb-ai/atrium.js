@@ -24,7 +24,15 @@ import { setMirroredCursor } from '../drawing/cursor.js';
 
 const SLIDESHOW_CLOSED_POLL_MS = 500;
 
-export const IS_SLIDESHOW = new URLSearchParams(location.search).has('slideshow');
+const params = new URLSearchParams(location.search);
+
+export const IS_SLIDESHOW = params.has('slideshow');
+
+// Set when the speaker already had a user-loaded deck at the moment it opened
+// this window. Tells preloadSlides() to skip index.html's data-src slides
+// outright — those are the built-in demo deck, and painting them would show
+// the wrong slides for as long as the real deck takes to arrive.
+export const SLIDESHOW_AWAITS_DECK = IS_SLIDESHOW && params.has('deck');
 
 const channel = new BroadcastChannel('slides-speaker-mode');
 let slideshowWin = null;
@@ -51,7 +59,6 @@ document.title = IS_SLIDESHOW ? 'Slideshow' : 'Speaker';
 // a flash of real slides (or slide 0) between page load and the first `state`
 // message arriving.
 if (IS_SLIDESHOW) {
-  const params = new URLSearchParams(location.search);
   if (params.get('whiteboard') === '1') setWhiteboardMode(true);
   const slideParam = Number.parseInt(params.get('slide'), 10);
   if (Number.isFinite(slideParam) && slideParam >= 0) setCurrentSlide(slideParam);
@@ -162,11 +169,14 @@ export function toggleSpeakerMode() {
     return;
   }
 
-  const params = new URLSearchParams({ slideshow: '1' });
-  if (whiteboardMode) params.set('whiteboard', '1');
-  if (currentSlide) params.set('slide', String(currentSlide));
+  const openParams = new URLSearchParams({ slideshow: '1' });
+  if (whiteboardMode) openParams.set('whiteboard', '1');
+  if (currentSlide) openParams.set('slide', String(currentSlide));
+  // Tell the new window a real deck is coming so it doesn't paint the demo
+  // slides baked into index.html while waiting for it.
+  if (currentDeckSources) openParams.set('deck', '1');
   slideshowWin = window.open(
-    location.pathname + '?' + params.toString() + location.hash,
+    location.pathname + '?' + openParams.toString() + location.hash,
     'slideshow',
   );
   cfg?.onSlideshowOpened?.();
