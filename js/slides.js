@@ -109,13 +109,20 @@ async function sourcesFromSvgs(files) {
 }
 
 // pdf.js is loaded on demand so the app stays dependency-free for the common
-// SVG path. Each page is rendered to a canvas at PDF_RENDER_SCALE (relative to
-// PDF's native 72dpi), kept as a PNG Blob, and wrapped at display time in a
-// tiny SVG whose viewBox matches the page's PDF units — that's what
-// getReferenceBox() keys off for stroke normalization. Higher scale = crisper
-// on large displays at the cost of upfront render time and broadcast payload.
+// SVG path. Each page is rasterized to a canvas, kept as a PNG Blob, and
+// wrapped at display time in a tiny SVG whose viewBox matches the page's PDF
+// units — that's what getReferenceBox() keys off for stroke normalization.
+//
+// Scale is derived from a target output width in pixels rather than being a
+// fixed multiple of the page's own units, because those units vary wildly by
+// producer: PowerPoint's 16:9 page is 960pt wide, Beamer's is 453pt. A
+// constant multiplier therefore over-renders some decks and leaves others too
+// soft for a 4K projector. The audience display is unknown at import time (the
+// slideshow window may not exist yet), so target 4K and cap the multiplier so
+// unusually small page boxes don't blow up render time and memory.
 const PDFJS_BASE = new URL('./pdfjs/', import.meta.url).href;
-const PDF_RENDER_SCALE = 6;
+const PDF_TARGET_WIDTH_PX = 3840;
+const PDF_MAX_SCALE = 8;
 let pdfjsPromise = null;
 function loadPdfJs() {
   if (!pdfjsPromise) {
@@ -141,7 +148,9 @@ async function sourcesFromPdf(file) {
   for (let i = 1; i <= doc.numPages; i++) {
     updateLoading(`Rendering PDF ${i}/${doc.numPages}`);
     const page = await doc.getPage(i);
-    const viewport = page.getViewport({ scale: PDF_RENDER_SCALE });
+    const pageWidthPt = page.view[2] - page.view[0];
+    const scale = Math.min(PDF_MAX_SCALE, PDF_TARGET_WIDTH_PX / pageWidthPt);
+    const viewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
