@@ -20,6 +20,7 @@ import {
   getLaserPoints,
   clearLaserPoints,
   clearLaserHead,
+  setLaserHead,
   startLaserLoop,
 } from './drawing/laser.js';
 import { changeStrokeSize } from './ui/stroke-size.js';
@@ -220,8 +221,16 @@ function onModeChanged() {
   syncModeDom();
   // The trail is left to fade out on its own (see above), but the sticky
   // head must go at once — it has no timestamp to expire by.
-  if (isLaserMode()) startLaserLoop();
-  else clearLaserHead();
+  if (isLaserMode()) {
+    // Seed the head before the loop's first frame so the dot replaces the
+    // now-hidden native cursor immediately, instead of after the next
+    // pointermove. Slideshow-side heads stay null by design — that window
+    // gets its persistent dot from the mirrored pointer (see cursor.js).
+    if (!IS_SLIDESHOW) setLaserHead(getLocalCursorPoint());
+    startLaserLoop();
+  } else {
+    clearLaserHead();
+  }
   syncToolbar();
 }
 

@@ -66,6 +66,17 @@ export function clearLaserHead() {
   headPoint = null;
 }
 
+// Place the sticky dot without touching the trail. Entering laser mode
+// hides the native cursor, so the speaker would stare at an empty slide
+// until the next pointermove pushed a trail sample — seeding the head from
+// the already-known pointer position paints the dot on the loop's first
+// frame instead. Non-finite input (pointer off-slide) leaves it unset.
+export function setLaserHead(point) {
+  headPoint = Number.isFinite(point?.x) && Number.isFinite(point?.y)
+    ? { x: point.x, y: point.y }
+    : null;
+}
+
 // Prune first so a stale point doesn't act as the EMA reference when the
 // trail has fully aged out — the next sample should start fresh, not
 // anchor off a dead tail.
