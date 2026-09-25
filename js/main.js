@@ -288,7 +288,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   initSpeakerLink({
     getLiveStroke: getLiveStrokePoints,
     getCursorPoint: getLocalCursorPoint,
-    onStateApplied: redrawAll,
     onSlideshowOpened: () => { showNotes(); syncToolbar(); },
     onSlideshowClosed: () => { hideNotes(); syncToolbar(); },
     onFreezeChanged: syncToolbar,

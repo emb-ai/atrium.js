@@ -22,8 +22,36 @@ export function on(event, fn) {
   return () => listeners.get(event)?.delete(fn);
 }
 
+// Non-null while batch() runs: emits collect their listeners here instead of
+// calling them, so one that subscribes to several events (redrawAll listens
+// to 'slide', 'strokes' and 'whiteboard') runs once, not once per event.
+let batchQueue = null;
+
 function emit(event) {
-  listeners.get(event)?.forEach(fn => fn());
+  const fns = listeners.get(event);
+  if (!fns) return;
+  if (batchQueue) {
+    fns.forEach(fn => batchQueue.add(fn));
+    return;
+  }
+  fns.forEach(fn => fn());
+}
+
+// Run `fn`, deferring every listener its setters trigger until it returns.
+// Each distinct listener then runs once, in the order it was first queued.
+export function batch(fn) {
+  if (batchQueue) {
+    fn();
+    return;
+  }
+  batchQueue = new Set();
+  try {
+    fn();
+  } finally {
+    const queued = batchQueue;
+    batchQueue = null;
+    queued.forEach(listener => listener());
+  }
 }
 
 // ─── Slides ───────────────────────────────────────────────────────────────────

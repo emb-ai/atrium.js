@@ -10,7 +10,7 @@
 // which owns both ends of that mirror.
 
 import {
-  on,
+  on, batch,
   currentSlide, setCurrentSlide,
   slidesData, setSlidesData,
   mode, setMode,
@@ -331,29 +331,25 @@ function queueSlideshowState(msg) {
 }
 
 function applySlideshowState(msg) {
-  // Update the mirror-only liveStroke cache *before* firing state setters,
-  // so the synchronous 'slide' / 'strokes' / 'whiteboard' subscribers see
-  // the fresh value on their first redraw — otherwise we'd need a second
-  // redrawAll() at the end to paint it correctly.
-  mirroredLiveStroke = msg.liveStroke
-    ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor }
-    : null;
-  // Same reasoning as mirroredLiveStroke: set before the state setters so
-  // the redraws they trigger already see the new pointer position.
-  setMirroredCursor(msg.cursorPoint);
+  // Batched so the subscribers of every setter below run once at the end —
+  // a redraw each for 'slide', 'strokes' and 'whiteboard' tripled the cost.
+  // setSlidesData emits unconditionally, so that final redraw always runs
+  // and picks up the new mirroredLiveStroke / pointer even when nothing else
+  // changed.
+  batch(() => {
+    mirroredLiveStroke = msg.liveStroke
+      ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor }
+      : null;
+    setMirroredCursor(msg.cursorPoint);
 
-  setCurrentSlide(msg.currentSlide);
-  setSlidesData(msg.slidesData);
-  if (typeof msg.mode === 'string') setMode(msg.mode);
-  setWhiteboardMode(!!msg.whiteboardMode);
-  if (Array.isArray(msg.whiteboardSlides)) setWhiteboardSlides(msg.whiteboardSlides);
-  if (typeof msg.whiteboardCurrent === 'number') setWhiteboardCurrent(msg.whiteboardCurrent);
+    setCurrentSlide(msg.currentSlide);
+    setSlidesData(msg.slidesData);
+    if (typeof msg.mode === 'string') setMode(msg.mode);
+    setWhiteboardMode(!!msg.whiteboardMode);
+    if (Array.isArray(msg.whiteboardSlides)) setWhiteboardSlides(msg.whiteboardSlides);
+    if (typeof msg.whiteboardCurrent === 'number') setWhiteboardCurrent(msg.whiteboardCurrent);
 
-  setLaserPoints(msg.laserPoints);
+    setLaserPoints(msg.laserPoints);
+  });
   if (getLaserPoints().length > 0) startLaserLoop();
-
-  // If every setter above was a no-op (values unchanged) no subscriber
-  // fires — ask the host to redraw once so the new mirroredLiveStroke
-  // still takes effect.
-  cfg?.onStateApplied?.();
 }
