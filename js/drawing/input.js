@@ -22,6 +22,11 @@ import { pushLaserPoint } from './laser.js';
 import { closeColorPicker } from '../ui/color-picker.js';
 
 const ERASE_THRESHOLD = 20;
+// Samples closer than this (CSS px) to the previous point are dropped. Pens
+// and high-rate mice report many near-duplicate positions; each one would
+// otherwise be stored, sent to the slideshow and redrawn forever after, with
+// no visible difference at any stroke width.
+const MIN_POINT_DISTANCE = 2;
 
 let isDrawing = false;
 let isErasing = false;
@@ -188,6 +193,8 @@ function onPointerMove(e) {
     // Keep appending even while the cursor is outside — the render-time
     // clip hides the outside portion, and this preserves stroke continuity
     // for arcs that briefly dip past the edge.
+    const last = currentPoints[currentPoints.length - 1];
+    if (last && Math.hypot(cursorPos.x - last.x, cursorPos.y - last.y) < MIN_POINT_DISTANCE) return;
     currentPoints.push(cursorPos);
     appendLiveSegment(currentPoints, cfg.getRefBox());
     cfg.onLiveChange?.();
