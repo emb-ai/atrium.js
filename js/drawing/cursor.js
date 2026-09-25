@@ -54,7 +54,6 @@ const MAX_SIZE = 64;
 let localPoint = null;
 // Slideshow-side: the position + glyph received from the speaker.
 let mirroredPoint = null;
-let broadcastPending = false;
 const images = new Map(); // glyph name -> { img, ready }
 let cfg = null;
 
@@ -164,13 +163,8 @@ function clearLocalPoint() {
   scheduleBroadcast();
 }
 
-// Pointer devices sample far faster than the screen refreshes, and every
-// broadcast costs the slideshow a full redraw — coalesce to one per frame.
+// The host's broadcast coalesces to one per frame, so this can fire on every
+// raw pointer sample.
 function scheduleBroadcast() {
-  if (broadcastPending) return;
-  broadcastPending = true;
-  requestAnimationFrame(() => {
-    broadcastPending = false;
-    cfg?.onCursorMoved?.();
-  });
+  cfg?.onCursorMoved?.();
 }

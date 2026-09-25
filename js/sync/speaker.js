@@ -161,8 +161,27 @@ export function markSlidesReady() {
   if (!receivedState) channel.postMessage({ type: 'request-state' });
 }
 
+// Coalesced to one message per frame: pointer devices sample far faster than
+// the screen refreshes, and every message carries all strokes of all slides.
+// Guards run at send time, so a freeze that lands mid-frame still holds.
+// A hidden tab gets no animation frames (Zoom in the foreground tab), so it
+// sends at once instead of stalling until the tab is shown again.
+let broadcastFrameId = null;
+
 export function broadcastState() {
   if (IS_SLIDESHOW) return;
+  if (document.hidden) {
+    sendState();
+    return;
+  }
+  if (broadcastFrameId !== null) return;
+  broadcastFrameId = requestAnimationFrame(() => {
+    broadcastFrameId = null;
+    sendState();
+  });
+}
+
+function sendState() {
   if (isFrozen()) return;
   const liveStroke = cfg?.getLiveStroke?.() ?? null;
   channel.postMessage({
