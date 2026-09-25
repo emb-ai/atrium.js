@@ -52,6 +52,12 @@ let mirroredLiveStroke = null;
 // Slideshow-only: whether any `state` message has landed yet. Gates the
 // retry request in markSlidesReady().
 let receivedState = false;
+// Slideshow-only: newest `state` waiting for the next frame. Applying a state
+// costs several full redraws, and while the speaker draws, messages arrive
+// faster than that — applying each one let a backlog build up and froze the
+// window. Only the newest matters, so older ones are dropped unapplied.
+let queuedState = null;
+let applyFrameId = null;
 // Speaker-side: physical pixel width of the screen the slideshow window sits
 // on, as reported by that window. null until one announces itself. PDF import
 // uses it to pick a rasterization resolution instead of always assuming 4K.
@@ -262,6 +268,9 @@ function onChannelMessage(event) {
         pendingDeck = msg;
         return;
       }
+      // A queued state belongs to the old deck; the speaker sends a fresh
+      // one right after the deck.
+      queuedState = null;
       cfg?.onDeckReceived?.(msg.sources);
     } else if (msg.type === 'state') {
       receivedState = true;
@@ -271,7 +280,7 @@ function onChannelMessage(event) {
         pendingState = msg;
         return;
       }
-      applySlideshowState(msg);
+      queueSlideshowState(msg);
     } else if (msg.type === 'video-sync') {
       if (!slidesReady) return;
       cfg?.onVideoSync?.(msg);
@@ -289,6 +298,17 @@ function onChannelMessage(event) {
       cfg?.broadcastVideoCatchup?.();
     }
   }
+}
+
+function queueSlideshowState(msg) {
+  queuedState = msg;
+  if (applyFrameId !== null) return;
+  applyFrameId = requestAnimationFrame(() => {
+    applyFrameId = null;
+    const next = queuedState;
+    queuedState = null;
+    if (next) applySlideshowState(next);
+  });
 }
 
 function applySlideshowState(msg) {
