@@ -2,13 +2,14 @@ import { computeReferenceBox } from './geometry.js';
 import {
   el,
   tmp,
-  ctx,
+  octx,
   getCanvasCssSize,
   setupCanvas as resizeCanvases,
 } from './canvas.js';
 import {
   syncPenStyles,
   redrawAll as rendererRedrawAll,
+  redrawLiveStroke,
 } from './drawing/renderer.js';
 import {
   updateProgressIndicator,
@@ -156,16 +157,9 @@ function setupCanvas() {
 // indicator + whiteboard page) against the same box.
 function redrawAll() {
   const refBox = getReferenceBox();
-  rendererRedrawAll({
-    refBox,
-    strokes: getStrokes() ?? [],
-    liveStroke: getMirroredLiveStroke(),
-  });
-  // Painted on `ctx` rather than the `tmp` overlay: the laser loop clears
-  // tmp every frame, which would blink the cursor away while a trail from
-  // a just-left laser mode is still fading out.
+  rendererRedrawAll({ refBox, strokes: getStrokes() ?? [] });
   if (IS_SLIDESHOW) {
-    drawMirroredCursor(ctx, refBox);
+    redrawMirroredLive(refBox);
   } else {
     const total = whiteboardMode ? whiteboardSlides.length : getSlides().length;
     updateProgressIndicator({
@@ -175,6 +169,16 @@ function redrawAll() {
     });
   }
   if (whiteboardMode) updateWhiteboardPagePosition(refBox);
+}
+
+// Slideshow-only: repaint the speaker's in-progress stroke and pointer on
+// the overlay canvas, leaving committed ink alone. Runs on every `live`
+// message. Not on `tmp`: the laser loop clears that every frame, which would
+// blink the pointer away while a trail from a just-left laser mode is still
+// fading out.
+function redrawMirroredLive(refBox = getReferenceBox()) {
+  redrawLiveStroke({ refBox, liveStroke: getMirroredLiveStroke() });
+  drawMirroredCursor(octx, refBox);
 }
 
 // ─── Toggles ──────────────────────────────────────────────────────────────────
@@ -291,7 +295,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     onSlideshowOpened: () => { showNotes(); syncToolbar(); },
     onSlideshowClosed: () => { hideNotes(); syncToolbar(); },
     onFreezeChanged: syncToolbar,
-    onLiveApplied: redrawAll,
+    onLiveApplied: () => redrawMirroredLive(),
     onVideoSync: applyVideoSync,
     onDeckReceived: rebuildSlidesFromSources,
     broadcastVideoCatchup: broadcastAllVideoStates,
@@ -306,7 +310,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     isSlideshow: IS_SLIDESHOW,
     getRefBox: getReferenceBox,
     onCursorMoved: broadcastLive,
-    onImageReady: redrawAll,
+    onImageReady: () => redrawMirroredLive(),
   });
 
   const handleCanvasResize = () => {

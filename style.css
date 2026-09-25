@@ -118,7 +118,8 @@ body.laser-mode #c {
   cursor: none;
 }
 
-#tmp {
+#tmp,
+#overlay {
   pointer-events: none;
 }
 

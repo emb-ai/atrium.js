@@ -6,7 +6,7 @@
 // those require.
 
 import {
-  ctx, tctx,
+  ctx, tctx, octx,
   getCanvasCssSize, applyPenStyles, clipToRect,
 } from '../canvas.js';
 import { denormalizePoint } from '../geometry.js';
@@ -83,12 +83,9 @@ export function appendLiveSegment(pts, refBox) {
   tctx.restore();
 }
 
-// Clear both canvases and repaint every committed stroke plus (optionally)
-// the in-progress live stroke. On the speaker window the live preview
-// already lives on tctx via appendLiveSegment — callers pass liveStroke=null
-// there. On the slideshow window liveStroke is the speaker's mirrored
-// stroke and must be repainted each frame.
-export function redrawAll({ refBox, strokes, liveStroke }) {
+// Clear both canvases and repaint every committed stroke. On the speaker
+// window this also wipes the live preview appendLiveSegment left on tctx.
+export function redrawAll({ refBox, strokes }) {
   const { width, height } = getCanvasCssSize();
   ctx.clearRect(0, 0, width, height);
   tctx.clearRect(0, 0, width, height);
@@ -104,15 +101,24 @@ export function redrawAll({ refBox, strokes, liveStroke }) {
     drawStroke(ctx, toScreenPoints(stroke.points, refBox));
   });
 
-  if (liveStroke && liveStroke.points.length) {
-    ctx.lineWidth = liveStroke.width;
-    ctx.strokeStyle = liveStroke.color || DEFAULT_STROKE_COLOR;
-    drawStroke(ctx, toScreenPoints(liveStroke.points, refBox));
-  }
-
   ctx.restore();
   // Restore the "live" pen styles after the per-stroke overrides so the
   // next appendLiveSegment / free draw picks up the user's current choices.
   ctx.lineWidth = lineWidth;
   ctx.strokeStyle = strokeColor;
+}
+
+// Slideshow-only: clear the overlay and repaint the speaker's mirrored
+// in-progress stroke on it. Cheap next to redrawAll, so it can run on every
+// incoming `live` message.
+export function redrawLiveStroke({ refBox, liveStroke }) {
+  const { width, height } = getCanvasCssSize();
+  octx.clearRect(0, 0, width, height);
+  if (!liveStroke?.points.length) return;
+
+  octx.save();
+  applyPenStyles(octx, liveStroke.width, liveStroke.color || DEFAULT_STROKE_COLOR);
+  clipToRect(octx, refBox);
+  drawStroke(octx, toScreenPoints(liveStroke.points, refBox));
+  octx.restore();
 }
