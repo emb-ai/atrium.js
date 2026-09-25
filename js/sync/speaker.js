@@ -1,6 +1,7 @@
 // BroadcastChannel wiring between the speaker window and its mirrored
 // slideshow. Speaker is authoritative; slideshow is a strict listener that
-// applies incoming `state` / `video-sync` messages and never writes back.
+// applies incoming `state` / `live` / `video-sync` messages and never writes
+// back.
 //
 // Owns: window.open lifecycle, `frozen` (pauses outbound broadcasts so the
 // speaker can preview changes without leaking them to the audience), the
@@ -57,6 +58,7 @@ let receivedState = false;
 // faster than that — applying each one let a backlog build up and froze the
 // window. Only the newest matters, so older ones are dropped unapplied.
 let queuedState = null;
+let queuedLive = null;
 let applyFrameId = null;
 // Speaker-side: physical pixel width of the screen the slideshow window sits
 // on, as reported by that window. null until one announces itself. PDF import
@@ -161,43 +163,71 @@ export function markSlidesReady() {
   if (!receivedState) channel.postMessage({ type: 'request-state' });
 }
 
-// Coalesced to one message per frame: pointer devices sample far faster than
-// the screen refreshes, and every message carries all strokes of all slides.
-// Guards run at send time, so a freeze that lands mid-frame still holds.
-// A hidden tab gets no animation frames (Zoom in the foreground tab), so it
-// sends at once instead of stalling until the tab is shown again.
+// Two outbound kinds, coalesced into at most one message per frame:
+//  • `state` — everything, including all strokes of all slides. Sent on
+//    committed changes (slide, strokes, whiteboard, mode).
+//  • `live`  — only what moves under the pointer: the in-progress stroke,
+//    laser trail and pointer position. Sent while drawing / pointing, so the
+//    per-frame cost doesn't grow with the ink already on the slides.
+// A frame that has both sends one `state`, which carries the live fields too.
+// Pointer devices sample far faster than the screen refreshes, hence the
+// coalescing. Guards run at send time, so a freeze that lands mid-frame still
+// holds. A hidden tab gets no animation frames (Zoom in the foreground tab),
+// so it sends at once instead of stalling until the tab is shown again.
 let broadcastFrameId = null;
+let fullBroadcastPending = false;
 
 export function broadcastState() {
+  scheduleBroadcast(true);
+}
+
+export function broadcastLive() {
+  scheduleBroadcast(false);
+}
+
+function scheduleBroadcast(full) {
   if (IS_SLIDESHOW) return;
+  if (full) fullBroadcastPending = true;
   if (document.hidden) {
-    sendState();
+    flushBroadcast();
     return;
   }
   if (broadcastFrameId !== null) return;
   broadcastFrameId = requestAnimationFrame(() => {
     broadcastFrameId = null;
-    sendState();
+    flushBroadcast();
   });
 }
 
-function sendState() {
+function flushBroadcast() {
+  const full = fullBroadcastPending;
+  fullBroadcastPending = false;
   if (isFrozen()) return;
-  const liveStroke = cfg?.getLiveStroke?.() ?? null;
+  const live = liveFields();
+  if (!full) {
+    channel.postMessage({ type: 'live', ...live });
+    return;
+  }
   channel.postMessage({
     type: 'state',
     currentSlide,
     slidesData,
     mode,
-    liveStroke,
+    whiteboardMode,
+    whiteboardSlides,
+    whiteboardCurrent,
+    ...live,
+  });
+}
+
+function liveFields() {
+  return {
+    liveStroke: cfg?.getLiveStroke?.() ?? null,
     liveStrokeWidth: lineWidth,
     liveStrokeColor: strokeColor,
     laserPoints: getLaserPoints(),
     cursorPoint: cfg?.getCursorPoint?.() ?? null,
-    whiteboardMode,
-    whiteboardSlides,
-    whiteboardCurrent,
-  });
+  };
 }
 
 // Forward an arbitrary message (used by video for its own message
@@ -213,7 +243,7 @@ export function postToSlideshow(msg) {
 
 // Store and broadcast a user-loaded deck so the slideshow window rebuilds
 // its #slides container from the same SVG text. Kept separate from
-// broadcastState because state fires on every stroke/laser/mode change
+// broadcastState because state fires on every stroke/slide/mode change
 // and the deck payload would be pointless overhead there.
 export function broadcastDeck(sources) {
   if (IS_SLIDESHOW) return;
@@ -287,9 +317,10 @@ function onChannelMessage(event) {
         pendingDeck = msg;
         return;
       }
-      // A queued state belongs to the old deck; the speaker sends a fresh
-      // one right after the deck.
+      // Queued messages belong to the old deck; the speaker sends a fresh
+      // state right after the deck.
       queuedState = null;
+      queuedLive = null;
       cfg?.onDeckReceived?.(msg.sources);
     } else if (msg.type === 'state') {
       receivedState = true;
@@ -300,6 +331,11 @@ function onChannelMessage(event) {
         return;
       }
       queueSlideshowState(msg);
+    } else if (msg.type === 'live') {
+      // Dropped until slides are ready: the next pointer move sends fresh
+      // live fields anyway.
+      if (!slidesReady) return;
+      queueSlideshowLive(msg);
     } else if (msg.type === 'video-sync') {
       if (!slidesReady) return;
       cfg?.onVideoSync?.(msg);
@@ -321,13 +357,41 @@ function onChannelMessage(event) {
 
 function queueSlideshowState(msg) {
   queuedState = msg;
+  // A state carries the live fields too, and is newer than any queued live.
+  queuedLive = null;
+  scheduleApply();
+}
+
+function queueSlideshowLive(msg) {
+  queuedLive = msg;
+  scheduleApply();
+}
+
+function scheduleApply() {
   if (applyFrameId !== null) return;
   applyFrameId = requestAnimationFrame(() => {
     applyFrameId = null;
-    const next = queuedState;
+    const state = queuedState;
+    const live = queuedLive;
     queuedState = null;
-    if (next) applySlideshowState(next);
+    queuedLive = null;
+    if (state) applySlideshowState(state);
+    if (live) applySlideshowLive(live);
   });
+}
+
+function applyLiveFields(msg) {
+  mirroredLiveStroke = msg.liveStroke
+    ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor }
+    : null;
+  setMirroredCursor(msg.cursorPoint);
+  setLaserPoints(msg.laserPoints);
+}
+
+function applySlideshowLive(msg) {
+  applyLiveFields(msg);
+  if (getLaserPoints().length > 0) startLaserLoop();
+  cfg?.onLiveApplied?.();
 }
 
 function applySlideshowState(msg) {
@@ -337,10 +401,7 @@ function applySlideshowState(msg) {
   // and picks up the new mirroredLiveStroke / pointer even when nothing else
   // changed.
   batch(() => {
-    mirroredLiveStroke = msg.liveStroke
-      ? { points: msg.liveStroke, width: msg.liveStrokeWidth ?? lineWidth, color: msg.liveStrokeColor }
-      : null;
-    setMirroredCursor(msg.cursorPoint);
+    applyLiveFields(msg);
 
     setCurrentSlide(msg.currentSlide);
     setSlidesData(msg.slidesData);
@@ -348,8 +409,6 @@ function applySlideshowState(msg) {
     setWhiteboardMode(!!msg.whiteboardMode);
     if (Array.isArray(msg.whiteboardSlides)) setWhiteboardSlides(msg.whiteboardSlides);
     if (typeof msg.whiteboardCurrent === 'number') setWhiteboardCurrent(msg.whiteboardCurrent);
-
-    setLaserPoints(msg.laserPoints);
   });
   if (getLaserPoints().length > 0) startLaserLoop();
 }

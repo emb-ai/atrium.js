@@ -46,7 +46,7 @@ import {
   isFrozen,
   getMirroredLiveStroke,
   markSlidesReady,
-  broadcastState,
+  broadcastLive,
   toggleSpeakerMode,
   toggleFreeze,
   postToSlideshow,
@@ -291,6 +291,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     onSlideshowOpened: () => { showNotes(); syncToolbar(); },
     onSlideshowClosed: () => { hideNotes(); syncToolbar(); },
     onFreezeChanged: syncToolbar,
+    onLiveApplied: redrawAll,
     onVideoSync: applyVideoSync,
     onDeckReceived: rebuildSlidesFromSources,
     broadcastVideoCatchup: broadcastAllVideoStates,
@@ -299,12 +300,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     isSlideshow: IS_SLIDESHOW,
     getRefBox: getReferenceBox,
     isFrozen,
-    onLiveChange: broadcastState,
+    onLiveChange: broadcastLive,
   });
   initMirroredCursor({
     isSlideshow: IS_SLIDESHOW,
     getRefBox: getReferenceBox,
-    onCursorMoved: broadcastState,
+    onCursorMoved: broadcastLive,
     onImageReady: redrawAll,
   });
 
